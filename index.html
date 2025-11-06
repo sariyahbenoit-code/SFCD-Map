@@ -73,4 +73,113 @@
         type: 'image',
         url: 'https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/SRCD%20surface.jpg',
         coordinates: corners
-      })
+      });
+
+      map.addLayer({
+        id: 'surface-layer',
+        type: 'raster',
+        source: 'surface-image',
+        paint: { 'raster-opacity': 1 }
+      });
+
+      // --- Landmarks ---
+      const landmarks = {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "properties": {
+              "title": "Floating Housing",
+              "address": "555 Francisco Blvd E, San Rafael, CA 94901",
+              "proposal": "Teiger Island precedent floating homes to replace liveaboard homes in the harbor",
+              "image": "https://riyahniko.com/wp-content/uploads/2025/11/Screenshot-2025-11-03-at-9.43.05-AM.png"
+            },
+            "geometry": { "type": "Point", "coordinates": [-122.5036, 37.9720] }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "title": "Municipally Leased Storage",
+              "address": "616 Canal St, San Rafael, CA 94901",
+              "proposal": "San Rafael can lease space in this storage facility for emergency supplies.",
+              "image": "https://riyahniko.com/wp-content/uploads/2025/11/Screenshot-2025-11-03-at-9.42.42-AM.png"
+            },
+            "geometry": { "type": "Point", "coordinates": [-122.5078, 37.9694] }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "title": "Solar Powered Pump Station",
+              "address": "555 Francisco Blvd W, San Rafael, CA 94901",
+              "proposal": "Vegetated and riprap forebay with solar pumping capacity.",
+              "image": "https://riyahniko.com/wp-content/uploads/2025/11/fisheye-after-2048x1536.jpeg"
+            },
+            "geometry": { "type": "Point", "coordinates": [-122.5115, 37.9675] }
+          }
+        ]
+      };
+
+      map.addSource('landmarks', { type: 'geojson', data: landmarks });
+
+      map.addLayer({
+        id: 'landmarks-layer',
+        type: 'circle',
+        source: 'landmarks',
+        paint: {
+          'circle-radius': 8,
+          'circle-color': '#FF5733',
+          'circle-stroke-width': 2,
+          'circle-stroke-color': '#fff'
+        }
+      });
+
+      // --- Popup Logic ---
+      map.on('click', 'landmarks-layer', (e) => {
+        const props = e.features[0].properties;
+        const html = `
+          <h3>${props.title}</h3>
+          <p><strong>Address:</strong> ${props.address}</p>
+          <p>${props.proposal}</p>
+          <img src="${props.image}" alt="${props.title}">
+        `;
+        new mapboxgl.Popup().setLngLat(e.lngLat).setHTML(html).addTo(map);
+      });
+
+      map.on('mouseenter', 'landmarks-layer', () => map.getCanvas().style.cursor = 'pointer');
+      map.on('mouseleave', 'landmarks-layer', () => map.getCanvas().style.cursor = '');
+
+      // --- Reveal Interaction ---
+      let radius = 0;
+      let hover = false;
+      let mouseLngLat = null;
+
+      map.on('mousemove', (e) => {
+        mouseLngLat = e.lngLat;
+      });
+
+      map.on('mouseenter', () => hover = true);
+      map.on('mouseleave', () => { hover = false; radius = 0; });
+
+      function animate() {
+        if (hover && radius < 300) radius += 3;
+        if (!hover && radius > 0) radius -= 10;
+
+        // Fade surface layer opacity by distance from cursor
+        if (mouseLngLat) {
+          const center = [mouseLngLat.lng, mouseLngLat.lat];
+          map.setPaintProperty('surface-layer', 'raster-opacity', [
+            'interpolate',
+            ['linear'],
+            ['distance', ['literal', center], ['literal', center]], // no-op, keeps full opacity
+            0, 0,
+            radius / 100000, 1
+          ]);
+        }
+        requestAnimationFrame(animate);
+      }
+
+      animate();
+    });
+  </script>
+</body>
+</html>
