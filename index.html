@@ -31,10 +31,10 @@
         [-122.537475, 37.952208]  // bottom left
       ];
 
-      // 🟦 UNDER raster (bottom)
+      // UNDER raster (bottom)
       map.addSource('under-image', {
         type: 'image',
-        url: 'https://raw.githubusercontent.com/riyahniko/srcd-map/main/SFCD_underground.jpg',
+        url: 'https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/refs/heads/main/assets/images/SFCD%20underground.jpg',
         coordinates: corners
       });
 
@@ -45,10 +45,10 @@
         paint: { 'raster-opacity': 1 }
       });
 
-      // 🟥 SURFACE raster (top)
+      // SURFACE raster (top)
       map.addSource('surface-image', {
         type: 'image',
-        url: 'https://raw.githubusercontent.com/riyahniko/srcd-map/main/SRCD_surface.jpg',
+        url: 'https://github.com/sariyahbenoit-code/SRCD-Map/blob/main/assets/images/SRCD%20surface.jpg?raw=true',
         coordinates: corners
       });
 
@@ -59,7 +59,7 @@
         paint: { 'raster-opacity': 1 }
       });
 
-      // 🟠 Animated circle mask for fade-out effect
+      // Animated circle mask for fade-out effect
       let radius = 0;
       let hover = false;
       let mouseLngLat = null;
