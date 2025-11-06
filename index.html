@@ -1,185 +1,77 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SRCD Raster Reveal Map</title>
-  <link href="https://api.mapbox.com/mapbox-gl-js/v3.15.0/mapbox-gl.css" rel="stylesheet" />
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      width: 100%;
-    }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SRCD Raster Reveal Map</title>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.15.0/mapbox-gl.css" rel="stylesheet" />
+    <style>
+      body { margin: 0; padding: 0; }
+      #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
 
-    #map {
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      width: 100%;
-    }
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.15.0/mapbox-gl.js"></script>
+    <script>
+      mapboxgl.accessToken = 'pk.eyJ1Ijoic25iZW5vaSIsImEiOiJjbWg5Y2IweTAwbnRzMm5xMXZrNnFnbmY5In0.Lza9yPTlMhbHE5zHNRb1aA';
 
-    .mapboxgl-popup {
-      max-width: 300px;
-      font-family: Arial, sans-serif;
-    }
-
-    .mapboxgl-popup img {
-      width: 100%;
-      border-radius: 4px;
-    }
-  </style>
-</head>
-<body>
-  <div id="map"></div>
-
-  <script src="https://api.mapbox.com/mapbox-gl-js/v3.15.0/mapbox-gl.js"></script>
-  <script>
-    mapboxgl.accessToken = 'pk.eyJ1Ijoic25iZW5vaSIsImEiOiJjbWg5Y2IweTAwbnRzMm5xMXZrNnFnbmY5In0.Lza9yPTlMhbHE5zHNRb1aA';
-
-    const map = new mapboxgl.Map({
-      container: 'map',
-      style: 'mapbox://styles/snbenoi/cmhjgr9hh000001rcf6cy38p0',
-      center: [-122.5078, 37.9694],
-      zoom: 13
-    });
-
-    map.on('load', () => {
-      // raster corner coords
-      const corners = [
-        [-122.537464, 37.984078], // top left
-        [-122.477353, 37.984108], // top right
-        [-122.477370, 37.952203], // bottom right
-        [-122.537475, 37.952208]  // bottom left
-      ];
-
-      // under
-      map.addSource('under-image', {
-        type: 'image',
-        url: 'https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/SFCD%20underground.jpg',
-        coordinates: corners
+      const map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/snbenoi/cmhjgr9hh000001rcf6cy38p0',
+        center: [-122.5078, 37.9694],
+        zoom: 13
       });
 
-      map.addLayer({
-        id: 'under-layer',
-        type: 'raster',
-        source: 'under-image',
-        paint: { 'raster-opacity': 1 }
+      map.on('load', () => {
+        console.log('Map loaded ✅');
+
+        const corners = [
+          [-122.537464, 37.984078], // top left
+          [-122.477353, 37.984108], // top right
+          [-122.477370, 37.952203], // bottom right
+          [-122.537475, 37.952208]  // bottom left
+        ];
+
+        // test images
+        const underUrl = 'https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/SFCD%20underground.jpg';
+        const surfaceUrl = 'https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/SRCD%20surface.jpg';
+
+        // log
+        console.log('Under URL:', underUrl);
+        console.log('Surface URL:', surfaceUrl);
+
+        // bottom layer, under
+        map.addSource('under-image', {
+          type: 'image',
+          url: underUrl,
+          coordinates: corners
+        });
+
+        map.addLayer({
+          id: 'under-layer',
+          type: 'raster',
+          source: 'under-image',
+          paint: { 'raster-opacity': 1 }
+        });
+
+        // top layer, surface
+        map.addSource('surface-image', {
+          type: 'image',
+          url: surfaceUrl,
+          coordinates: corners
+        });
+
+        map.addLayer({
+          id: 'surface-layer',
+          type: 'raster',
+          source: 'surface-image',
+          paint: { 'raster-opacity': 1 }
+        });
+
+        console.log('Layers added ✅');
       });
-
-      // surface
-      map.addSource('surface-image', {
-        type: 'image',
-        url: 'https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/SRCD%20surface.jpg',
-        coordinates: corners
-      });
-
-      map.addLayer({
-        id: 'surface-layer',
-        type: 'raster',
-        source: 'surface-image',
-        paint: { 'raster-opacity': 1 }
-      });
-
-      // landmarks
-      const landmarks = {
-        "type": "FeatureCollection",
-        "features": [
-          {
-            "type": "Feature",
-            "properties": {
-              "title": "Floating Housing",
-              "address": "555 Francisco Blvd E, San Rafael, CA 94901",
-              "proposal": "Teiger Island precedent floating homes to replace liveaboard homes in the harbor",
-              "image": "https://riyahniko.com/wp-content/uploads/2025/11/Screenshot-2025-11-03-at-9.43.05-AM.png"
-            },
-            "geometry": { "type": "Point", "coordinates": [-122.5036, 37.9720] }
-          },
-          {
-            "type": "Feature",
-            "properties": {
-              "title": "Municipally Leased Storage",
-              "address": "616 Canal St, San Rafael, CA 94901",
-              "proposal": "San Rafael can lease space in this storage facility for emergency supplies.",
-              "image": "https://riyahniko.com/wp-content/uploads/2025/11/Screenshot-2025-11-03-at-9.42.42-AM.png"
-            },
-            "geometry": { "type": "Point", "coordinates": [-122.5078, 37.9694] }
-          },
-          {
-            "type": "Feature",
-            "properties": {
-              "title": "Solar Powered Pump Station",
-              "address": "555 Francisco Blvd W, San Rafael, CA 94901",
-              "proposal": "Vegetated and riprap forebay with solar pumping capacity.",
-              "image": "https://riyahniko.com/wp-content/uploads/2025/11/fisheye-after-2048x1536.jpeg"
-            },
-            "geometry": { "type": "Point", "coordinates": [-122.5115, 37.9675] }
-          }
-        ]
-      };
-
-      map.addSource('landmarks', { type: 'geojson', data: landmarks });
-
-      map.addLayer({
-        id: 'landmarks-layer',
-        type: 'circle',
-        source: 'landmarks',
-        paint: {
-          'circle-radius': 8,
-          'circle-color': '#FF5733',
-          'circle-stroke-width': 2,
-          'circle-stroke-color': '#fff'
-        }
-      });
-
-      // popup
-      map.on('click', 'landmarks-layer', (e) => {
-        const props = e.features[0].properties;
-        const html = `
-          <h3>${props.title}</h3>
-          <p><strong>Address:</strong> ${props.address}</p>
-          <p>${props.proposal}</p>
-          <img src="${props.image}" alt="${props.title}">
-        `;
-        new mapboxgl.Popup().setLngLat(e.lngLat).setHTML(html).addTo(map);
-      });
-
-      map.on('mouseenter', 'landmarks-layer', () => map.getCanvas().style.cursor = 'pointer');
-      map.on('mouseleave', 'landmarks-layer', () => map.getCanvas().style.cursor = '');
-
-      // reveal
-      let radius = 0;
-      let hover = false;
-      let mouseLngLat = null;
-
-      map.on('mousemove', (e) => {
-        mouseLngLat = e.lngLat;
-      });
-
-      map.on('mouseenter', () => hover = true);
-      map.on('mouseleave', () => { hover = false; radius = 0; });
-
-      function animate() {
-        if (hover && radius < 300) radius += 3;
-        if (!hover && radius > 0) radius -= 10;
-
-        // Fade surface layer opacity by distance from cursor
-        if (mouseLngLat) {
-          const center = [mouseLngLat.lng, mouseLngLat.lat];
-          map.setPaintProperty('surface-layer', 'raster-opacity', [
-            'interpolate',
-            ['linear'],
-            ['distance', ['literal', center], ['literal', center]], // no-op, keeps full opacity
-            0, 0,
-            radius / 100000, 1
-          ]);
-        }
-        requestAnimationFrame(animate);
-      }
-
-      animate();
-    });
-  </script>
-</body>
+    </script>
+  </body>
 </html>
