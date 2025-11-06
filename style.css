@@ -8,7 +8,7 @@ const map = new mapboxgl.Map({
 });
 
 map.on('load', () => {
-  // Step 1: Define your GeoJSON data
+  // Define GeoJSON data 
   const landmarks = {
     "type": "FeatureCollection",
     "features": [
@@ -54,7 +54,7 @@ map.on('load', () => {
     ]
   };
 
-  // Step 2: Add the GeoJSON as a source
+  // GeoJSON as a source
   map.addSource('landmarks', {
     type: 'geojson',
     data: landmarks
@@ -73,7 +73,7 @@ map.on('load', () => {
     }
   });
 
-  // Step 4: Add popups on click
+  // popups on click
   map.on('click', 'landmarks-layer', (e) => {
     const feature = e.features[0];
     const props = feature.properties;
@@ -92,7 +92,7 @@ map.on('load', () => {
       .addTo(map);
   });
 
-  // Change cursor to pointer when hovering
+  // pointer hover
   map.on('mouseenter', 'landmarks-layer', () => map.getCanvas().style.cursor = 'pointer');
   map.on('mouseleave', 'landmarks-layer', () => map.getCanvas().style.cursor = '');
 });
