@@ -46,7 +46,7 @@
     });
 
     map.on('load', () => {
-      // --- Raster Image Corners ---
+      // raster corner coords
       const corners = [
         [-122.537464, 37.984078], // top left
         [-122.477353, 37.984108], // top right
@@ -54,7 +54,7 @@
         [-122.537475, 37.952208]  // bottom left
       ];
 
-      // --- UNDER (bottom) image ---
+      // under
       map.addSource('under-image', {
         type: 'image',
         url: 'https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/SFCD%20underground.jpg',
@@ -68,7 +68,7 @@
         paint: { 'raster-opacity': 1 }
       });
 
-      // --- SURFACE (top) image ---
+      // surface
       map.addSource('surface-image', {
         type: 'image',
         url: 'https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/SRCD%20surface.jpg',
@@ -82,7 +82,7 @@
         paint: { 'raster-opacity': 1 }
       });
 
-      // --- Landmarks ---
+      // landmarks
       const landmarks = {
         "type": "FeatureCollection",
         "features": [
@@ -133,7 +133,7 @@
         }
       });
 
-      // --- Popup Logic ---
+      // popup
       map.on('click', 'landmarks-layer', (e) => {
         const props = e.features[0].properties;
         const html = `
@@ -148,7 +148,7 @@
       map.on('mouseenter', 'landmarks-layer', () => map.getCanvas().style.cursor = 'pointer');
       map.on('mouseleave', 'landmarks-layer', () => map.getCanvas().style.cursor = '');
 
-      // --- Reveal Interaction ---
+      // reveal
       let radius = 0;
       let hover = false;
       let mouseLngLat = null;
