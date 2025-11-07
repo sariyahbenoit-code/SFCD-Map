@@ -30,4 +30,129 @@
 
   <script src="https://api.mapbox.com/mapbox-gl-js/v3.15.0/mapbox-gl.js"></script>
   <script>
-    mapboxgl.accessToken = 'pk.eyJ1Ijoic25iZW5vaSIsImE
+    mapboxgl.accessToken = 'pk.eyJ1Ijoic25iZW5vaSIsImEiOiJjbWg5Y2IweTAwbnRzMm5xMXZrNnFnbmY5In0.Lza9yPTlMhbHE5zHNRb1aA';
+
+    const map = new mapboxgl.Map({
+      container: 'map',
+      style: 'mapbox://styles/snbenoi/cmhjgr9hh000001rcf6cy38p0',
+      center: [-122.5078, 37.9694],
+      zoom: 13.5 // slightly zoomed in so raster fills the screen
+    });
+
+    map.on('load', () => {
+      console.log('Map loaded ✅');
+
+      // define raster corners
+      const corners = [
+        [-122.537464, 37.984078], // top left
+        [-122.477353, 37.984108], // top right
+        [-122.477370, 37.952203], // bottom right
+        [-122.537475, 37.952208]  // bottom left
+      ];
+
+      const underUrl = 'https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/SFCD%20underground.jpg';
+      const surfaceUrl = 'https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/SRCD%20surface.jpg';
+
+      // bottom (underground) image layer
+      map.addSource('under-image', {
+        type: 'image',
+        url: underUrl,
+        coordinates: corners
+      });
+      map.addLayer({
+        id: 'under-layer',
+        type: 'raster',
+        source: 'under-image',
+        paint: { 'raster-opacity': 1 }
+      });
+
+      // top (surface) image layer
+      map.addSource('surface-image', {
+        type: 'image',
+        url: surfaceUrl,
+        coordinates: corners
+      });
+      map.addLayer({
+        id: 'surface-layer',
+        type: 'raster',
+        source: 'surface-image',
+        paint: { 'raster-opacity': 1 }
+      });
+
+      // 🗺️ add landmarks from GitHub GeoJSON
+      map.addSource('landmarks', {
+        type: 'geojson',
+        data: 'https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/data/619data.geojson'
+      });
+
+      map.addLayer({
+        id: 'landmarks-layer',
+        type: 'circle',
+        source: 'landmarks',
+        paint: {
+          'circle-radius': 8,
+          'circle-color': '#FF5733',
+          'circle-stroke-width': 2,
+          'circle-stroke-color': '#fff'
+        }
+      });
+
+      // 📍 popups
+      map.on('click', 'landmarks-layer', (e) => {
+        const feature = e.features[0];
+        const props = feature.properties;
+
+        const html = `
+          <h3>${props.title || 'Untitled'}</h3>
+          <p><strong>Address:</strong> ${props.address || ''}</p>
+          <p>${props.proposal || ''}</p>
+          ${props.image ? `<img src="${props.image}" alt="${props.title}" />` : ''}
+        `;
+
+        new mapboxgl.Popup()
+          .setLngLat(feature.geometry.coordinates)
+          .setHTML(html)
+          .addTo(map);
+      });
+
+      // hover cursor change
+      map.on('mouseenter', 'landmarks-layer', () => {
+        map.getCanvas().style.cursor = 'pointer';
+        haloRadius = 160; // double halo when near a point
+      });
+      map.on('mouseleave', 'landmarks-layer', () => {
+        map.getCanvas().style.cursor = '';
+        haloRadius = 80; // normal halo size
+      });
+
+      // 🌫️ Mouse-based reveal mask (opacity=0 halo)
+      let mousePos = [0, 0];
+      let haloRadius = 80; // default halo size
+
+      const canvas = map.getCanvasContainer();
+
+      canvas.addEventListener('mousemove', (e) => {
+        mousePos = [e.offsetX, e.offsetY];
+        updateRevealMask();
+      });
+
+      function updateRevealMask() {
+        // build a radial gradient mask centered on mouse
+        const gradient = `radial-gradient(circle ${haloRadius}px at ${mousePos[0]}px ${mousePos[1]}px,
+          rgba(0,0,0,0) 0%, 
+          rgba(0,0,0,0) 60%, 
+          rgba(0,0,0,1) 100%)`;
+
+        // apply as mask to the surface layer container
+        map.getCanvasContainer().style.maskImage = gradient;
+        map.getCanvasContainer().style.webkitMaskImage = gradient;
+        map.getCanvasContainer().style.maskMode = 'luminance';
+        map.getCanvasContainer().style.webkitMaskMode = 'luminance';
+      }
+
+      // initialize the mask
+      updateRevealMask();
+    });
+  </script>
+</body>
+</html>
