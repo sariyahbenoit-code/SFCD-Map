@@ -6,36 +6,14 @@
   <title>SRCD Raster Reveal Map</title>
   <link href="https://api.mapbox.com/mapbox-gl-js/v3.15.0/mapbox-gl.css" rel="stylesheet" />
   <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      overflow: hidden;
-    }
-    #map {
-      position: absolute;
-      top: 0; bottom: 0; width: 100%;
-    }
-    canvas.reveal-mask {
-      pointer-events: none; /* mouse interaction */
-      position: absolute;
-      top: 0;
-      left: 0;
-      z-index: 2;
-    }
-    .mapboxgl-popup {
-      max-width: 300px;
-      font-family: Arial, sans-serif;
-    }
-    .mapboxgl-popup img {
-      width: 100%;
-      border-radius: 4px;
-    }
+    html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+    #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+    .mapboxgl-popup { max-width: 300px; font-family: Arial, sans-serif; }
+    .mapboxgl-popup img { width: 100%; border-radius: 4px; }
   </style>
 </head>
 <body>
   <div id="map"></div>
-  <canvas class="reveal-mask"></canvas>
 
   <script src="https://api.mapbox.com/mapbox-gl-js/v3.15.0/mapbox-gl.js"></script>
   <script>
@@ -49,20 +27,17 @@
     });
 
     map.on('load', () => {
-      console.log('Map loaded ✅');
-
-      // corner coords
       const corners = [
-        [-122.537464, 37.984078], // top left
-        [-122.477353, 37.984108], // top right
-        [-122.477370, 37.952203], // bottom right
-        [-122.537475, 37.952208]  // bottom left
+        [-122.537464, 37.984078],
+        [-122.477353, 37.984108],
+        [-122.477370, 37.952203],
+        [-122.537475, 37.952208]
       ];
 
       const underUrl = 'https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/SFCD%20underground.jpg';
       const surfaceUrl = 'https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/SRCD%20surface.jpg';
 
-      // --- UNDERGROUND raster ---
+      // underground layer
       map.addSource('under-image', {
         type: 'image',
         url: underUrl,
@@ -75,7 +50,7 @@
         paint: { 'raster-opacity': 1 }
       });
 
-      // --- LANDMARK POINTS (on base layer, visible) ---
+      // landmarks (always visible)
       map.addSource('landmarks', {
         type: 'geojson',
         data: 'https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/data/619data.geojson'
@@ -92,7 +67,7 @@
         }
       });
 
-      // --- SURFACE raster (on top, to be revealed with mask) ---
+      // surface layer (top)
       map.addSource('surface-image', {
         type: 'image',
         url: surfaceUrl,
@@ -105,15 +80,15 @@
         paint: { 'raster-opacity': 1 }
       });
 
-      // Popup for points
+      // Popups
       map.on('click', 'landmarks-layer', (e) => {
         const f = e.features[0];
-        const props = f.properties;
+        const p = f.properties;
         const html = `
-          <h3>${props.title || 'Untitled'}</h3>
-          <p><strong>Address:</strong> ${props.address || ''}</p>
-          <p>${props.proposal || ''}</p>
-          ${props.image ? `<img src="${props.image}" alt="${props.title}" />` : ''}
+          <h3>${p.title || 'Untitled'}</h3>
+          <p><strong>Address:</strong> ${p.address || ''}</p>
+          <p>${p.proposal || ''}</p>
+          ${p.image ? `<img src="${p.image}" alt="${p.title}">` : ''}
         `;
         new mapboxgl.Popup()
           .setLngLat(f.geometry.coordinates)
@@ -121,62 +96,57 @@
           .addTo(map);
       });
 
-      // --- Reveal Mask Canvas ---
-      const canvas = document.querySelector('.reveal-mask');
-      const ctx = canvas.getContext('2d');
-
-      function resizeCanvas() {
-        canvas.width = map.getContainer().clientWidth;
-        canvas.height = map.getContainer().clientHeight;
-      }
-      resizeCanvas();
-      window.addEventListener('resize', resizeCanvas);
-
-      let mouseX = -9999, mouseY = -9999;
+      // Reveal mask effect
       let haloRadius = 80;
+      let mouseLngLat = null;
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = 512;
+      canvas.height = 512;
 
-      map.getCanvasContainer().addEventListener('mousemove', (e) => {
-        const rect = map.getContainer().getBoundingClientRect();
-        mouseX = e.clientX - rect.left;
-        mouseY = e.clientY - rect.top;
-        drawMask();
+      function updateMask() {
+        const { width, height } = canvas;
+        ctx.clearRect(0, 0, width, height);
+        ctx.fillStyle = 'rgba(255,255,255,1)';
+        ctx.fillRect(0, 0, width, height);
+
+        if (mouseLngLat) {
+          // convert mouse position to pixel coordinates
+          const p = map.project(mouseLngLat);
+          const x = (p.x / map.transform.width) * width;
+          const y = (p.y / map.transform.height) * height;
+          const gradient = ctx.createRadialGradient(x, y, haloRadius * 0.3, x, y, haloRadius);
+          gradient.addColorStop(0, 'rgba(255,255,255,0)');
+          gradient.addColorStop(1, 'rgba(255,255,255,1)');
+          ctx.fillStyle = gradient;
+          ctx.fillRect(0, 0, width, height);
+        }
+        const maskUrl = canvas.toDataURL();
+        map.setPaintProperty('surface-layer', 'raster-opacity', [
+          'interpolate',
+          ['linear'],
+          ['image', maskUrl],
+          0, 0,
+          1, 1
+        ]);
+      }
+
+      // fallback: static opacity until mouse moves
+      updateMask();
+
+      map.on('mousemove', (e) => {
+        mouseLngLat = e.lngLat;
+        updateMask();
       });
 
       map.on('mouseenter', 'landmarks-layer', () => {
-        map.getCanvas().style.cursor = 'pointer';
         haloRadius = 160;
-        drawMask();
+        map.getCanvas().style.cursor = 'pointer';
       });
       map.on('mouseleave', 'landmarks-layer', () => {
-        map.getCanvas().style.cursor = '';
         haloRadius = 80;
-        drawMask();
+        map.getCanvas().style.cursor = '';
       });
-
-      function drawMask() {
-        // Clear canvas
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        // Fill entire canvas with semi-opaque black (to dim top raster)
-        ctx.fillStyle = 'rgba(0,0,0,0.65)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        // Create transparent circular reveal
-        const grad = ctx.createRadialGradient(mouseX, mouseY, haloRadius * 0.5, mouseX, mouseY, haloRadius);
-        grad.addColorStop(0, 'rgba(0,0,0,0)');
-        grad.addColorStop(1, 'rgba(0,0,0,1)');
-        ctx.globalCompositeOperation = 'destination-out';
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(mouseX, mouseY, haloRadius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalCompositeOperation = 'source-over';
-      }
-
-      // Overlay canvas directly on top of the map container
-      function animate() {
-        requestAnimationFrame(animate);
-        drawMask();
-      }
-      animate();
     });
   </script>
 </body>
