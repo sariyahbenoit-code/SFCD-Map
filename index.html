@@ -1,4 +1,4 @@
-<<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -6,97 +6,28 @@
   <title>SRCD Raster Reveal Map</title>
   <link href="https://api.mapbox.com/mapbox-gl-js/v3.15.0/mapbox-gl.css" rel="stylesheet" />
   <style>
-    body { margin: 0; padding: 0; }
-    #map { position: absolute; top: 0; bottom: 0; width: 100%; }
-
-    /* Slider styling */
-    .slider-container {
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+    }
+    #map {
       position: absolute;
-      top: 10px;
-      left: 10px;
-      background: rgba(255, 255, 255, 0.9);
-      padding: 8px 12px;
+      top: 0; bottom: 0; width: 100%;
+    }
+    .mapboxgl-popup {
+      max-width: 300px;
+      font-family: Arial, sans-serif;
+    }
+    .mapboxgl-popup img {
+      width: 100%;
       border-radius: 4px;
-      font-family: sans-serif;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-    }
-    .slider-container label {
-      display: block;
-      font-size: 14px;
-      margin-bottom: 4px;
-    }
-    #opacity-slider {
-      width: 200px;
     }
   </style>
 </head>
 <body>
   <div id="map"></div>
 
-  <div class="slider-container">
-    <label for="opacity-slider">Surface Opacity</label>
-    <input id="opacity-slider" type="range" min="0" max="1" step="0.01" value="1">
-  </div>
-
   <script src="https://api.mapbox.com/mapbox-gl-js/v3.15.0/mapbox-gl.js"></script>
   <script>
-    mapboxgl.accessToken = 'pk.eyJ1Ijoic25iZW5vaSIsImEiOiJjbWg5Y2IweTAwbnRzMm5xMXZrNnFnbmY5In0.Lza9yPTlMhbHE5zHNRb1aA';
-
-    const map = new mapboxgl.Map({
-      container: 'map',
-      style: 'mapbox://styles/snbenoi/cmhjgr9hh000001rcf6cy38p0',
-      center: [-122.5078, 37.9694],
-      zoom: 13
-    });
-
-    map.on('load', () => {
-      console.log('Map loaded ✅');
-
-      const corners = [
-        [-122.537464, 37.984078], // top left
-        [-122.477353, 37.984108], // top right
-        [-122.477370, 37.952203], // bottom right
-        [-122.537475, 37.952208]  // bottom left
-      ];
-
-      const underUrl = 'https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/SFCD%20underground.jpg';
-      const surfaceUrl = 'https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/SRCD%20surface.jpg';
-
-      // Bottom layer
-      map.addSource('under-image', {
-        type: 'image',
-        url: underUrl,
-        coordinates: corners
-      });
-      map.addLayer({
-        id: 'under-layer',
-        type: 'raster',
-        source: 'under-image',
-        paint: { 'raster-opacity': 1 }
-      });
-
-      // Top layer
-      map.addSource('surface-image', {
-        type: 'image',
-        url: surfaceUrl,
-        coordinates: corners
-      });
-      map.addLayer({
-        id: 'surface-layer',
-        type: 'raster',
-        source: 'surface-image',
-        paint: { 'raster-opacity': 1 }
-      });
-
-      console.log('Layers added ✅');
-
-      // 🧩 Add interactivity: opacity slider
-      const slider = document.getElementById('opacity-slider');
-      slider.addEventListener('input', (e) => {
-        const opacity = parseFloat(e.target.value);
-        map.setPaintProperty('surface-layer', 'raster-opacity', opacity);
-      });
-    });
-  </script>
-</body>
-</html>
+    mapboxgl.accessToken = 'pk.eyJ1Ijoic25iZW5vaSIsImE
