@@ -25,8 +25,7 @@
 
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.15.0/mapbox-gl.js"></script>
 <script>
-mapboxgl.accessToken =
-  "pk.eyJ1Ijoic25iZW5vaSIsImEiOiJjbWg5Y2IweTAwbnRzMm5xMXZrNnFnbmY5In0.Lza9yPTlMhbHE5zHNRb1aA";
+mapboxgl.accessToken = 'pk.eyJ1Ijoic25iZW5vaSIsImEiOiJjbWg5Y2IweTAwbnRzMm5xMXZrNnFnbmY5In0.Lza9yPTlMhbHE5zHNRb1aA';
 
 const map = new mapboxgl.Map({
   container: "map",
@@ -36,7 +35,6 @@ const map = new mapboxgl.Map({
 });
 
 map.on("load", () => {
-  //base layers
   const corners = [
     [-122.537464, 37.984078],
     [-122.477353, 37.984108],
@@ -44,25 +42,17 @@ map.on("load", () => {
     [-122.537475, 37.952208]
   ];
 
-  const underUrl =
-    "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/SFCD%20underground.jpg";
-  const surfaceUrl =
-    "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/SRCD%20surface.jpg";
+  const underUrl = "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/SFCD%20underground.jpg";
+  const surfaceUrl = "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/SRCD%20surface.jpg";
 
-  // bottom (underground)
-  map.addSource("under-image", {
-    type: "image",
-    url: underUrl,
-    coordinates: corners
-  });
-  map.addLayer({
-    id: "under-layer",
-    type: "raster",
-    source: "under-image",
-    paint: { "raster-opacity": 1 }
-  });
+  // Add base and surface images as map layers
+  map.addSource("under-image", { type: "image", url: underUrl, coordinates: corners });
+  map.addLayer({ id: "under-layer", type: "raster", source: "under-image", paint: { "raster-opacity": 1 } });
 
-  // geojson points (on base)
+  map.addSource("surface-image", { type: "image", url: surfaceUrl, coordinates: corners });
+  map.addLayer({ id: "surface-layer", type: "raster", source: "surface-image", paint: { "raster-opacity": 1 } });
+
+  // Add GeoJSON points on top
   map.addSource("landmarks", {
     type: "geojson",
     data: "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/data/619data.geojson"
@@ -79,47 +69,7 @@ map.on("load", () => {
     }
   });
 
-  // overlay surface 
-  const revealCanvas = document.getElementById("revealCanvas");
-  const ctx = revealCanvas.getContext("2d");
-  const surfaceImg = new Image();
-  surfaceImg.crossOrigin = "anonymous";
-  surfaceImg.src = surfaceUrl;
-
-  function resizeCanvas() {
-    revealCanvas.width = map.getContainer().clientWidth;
-    revealCanvas.height = map.getContainer().clientHeight;
-    drawSurface();
-  }
-  window.addEventListener("resize", resizeCanvas);
-
-  surfaceImg.onload = () => {
-    resizeCanvas();
-    drawSurface();
-  };
-
-  let mouse = { x: -9999, y: -9999 };
-  let haloRadius = 100;
-
-  // track mouse position over map
-  map.getCanvasContainer().addEventListener("mousemove", (e) => {
-    const rect = map.getContainer().getBoundingClientRect();
-    mouse.x = e.clientX - rect.left;
-    mouse.y = e.clientY - rect.top;
-    drawSurface();
-  });
-
-  map.on("mouseenter", "landmarks-layer", () => {
-    map.getCanvas().style.cursor = "pointer";
-    haloRadius = 180;
-    drawSurface();
-  });
-  map.on("mouseleave", "landmarks-layer", () => {
-    map.getCanvas().style.cursor = "";
-    haloRadius = 100;
-    drawSurface();
-  });
-
+  // --- Popups ---
   map.on("click", "landmarks-layer", (e) => {
     const f = e.features[0];
     const p = f.properties;
@@ -129,22 +79,69 @@ map.on("load", () => {
       <p>${p.proposal || ""}</p>
       ${p.image ? `<img src="${p.image}" alt="${p.title}">` : ""}
     `;
-    new mapboxgl.Popup()
-      .setLngLat(f.geometry.coordinates)
-      .setHTML(html)
-      .addTo(map);
+    new mapboxgl.Popup().setLngLat(f.geometry.coordinates).setHTML(html).addTo(map);
   });
 
-  function drawSurface() {
+  // --- Reveal Canvas Overlay ---
+  const revealCanvas = document.getElementById("revealCanvas");
+  const ctx = revealCanvas.getContext("2d");
+  let haloRadius = 100;
+  let mouse = { x: -9999, y: -9999 };
+
+  // load the surface image for the overlay effect
+  const surfaceImg = new Image();
+  surfaceImg.crossOrigin = "anonymous";
+  surfaceImg.src = surfaceUrl;
+
+  function resizeCanvas() {
+    revealCanvas.width = map.getContainer().clientWidth;
+    revealCanvas.height = map.getContainer().clientHeight;
+  }
+  resizeCanvas();
+  window.addEventListener("resize", resizeCanvas);
+
+  map.getCanvasContainer().addEventListener("mousemove", (e) => {
+    const rect = map.getContainer().getBoundingClientRect();
+    mouse.x = e.clientX - rect.left;
+    mouse.y = e.clientY - rect.top;
+  });
+
+  map.on("mouseenter", "landmarks-layer", () => {
+    map.getCanvas().style.cursor = "pointer";
+    haloRadius = 180;
+  });
+  map.on("mouseleave", "landmarks-layer", () => {
+    map.getCanvas().style.cursor = "";
+    haloRadius = 100;
+  });
+
+  // convert geographic corners to screen coordinates
+  function getScreenCoords() {
+    const tl = map.project(corners[0]);
+    const tr = map.project(corners[1]);
+    const br = map.project(corners[2]);
+    const bl = map.project(corners[3]);
+    return { tl, tr, br, bl };
+  }
+
+  function drawOverlay() {
     if (!surfaceImg.complete) return;
     const w = revealCanvas.width;
     const h = revealCanvas.height;
     ctx.clearRect(0, 0, w, h);
 
-    // stretched to map bounds
-    ctx.drawImage(surfaceImg, 0, 0, w, h);
+    // get on-screen position of raster corners
+    const { tl, tr, br, bl } = getScreenCoords();
 
-    // (soft edge gradient)
+    // compute draw width/height and transform to align image to map
+    const drawW = tr.x - tl.x;
+    const drawH = bl.y - tl.y;
+
+    ctx.save();
+    ctx.translate(tl.x, tl.y);
+    ctx.drawImage(surfaceImg, 0, 0, drawW, drawH);
+
+    // erase circular region to reveal map below
     const grd = ctx.createRadialGradient(mouse.x, mouse.y, haloRadius * 0.6, mouse.x, mouse.y, haloRadius);
     grd.addColorStop(0, "rgba(0,0,0,1)");
     grd.addColorStop(1, "rgba(0,0,0,0)");
@@ -154,14 +151,14 @@ map.on("load", () => {
     ctx.arc(mouse.x, mouse.y, haloRadius, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalCompositeOperation = "source-over";
+    ctx.restore();
   }
 
-  // animate 
-  function loop() {
-    drawSurface();
-    requestAnimationFrame(loop);
+  function animate() {
+    drawOverlay();
+    requestAnimationFrame(animate);
   }
-  loop();
+  animate();
 });
 </script>
 </body>
