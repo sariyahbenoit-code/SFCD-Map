@@ -1,153 +1,168 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SRCD Raster Reveal Map</title>
-  <link href="https://api.mapbox.com/mapbox-gl-js/v3.15.0/mapbox-gl.css" rel="stylesheet" />
-  <style>
-    html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
-    #map { position: absolute; top: 0; bottom: 0; width: 100%; }
-    .mapboxgl-popup { max-width: 300px; font-family: Arial, sans-serif; }
-    .mapboxgl-popup img { width: 100%; border-radius: 4px; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SRCD Raster Reveal Map</title>
+<link href="https://api.mapbox.com/mapbox-gl-js/v3.15.0/mapbox-gl.css" rel="stylesheet" />
+<style>
+  html, body { margin:0; padding:0; height:100%; overflow:hidden; }
+  #map { position:absolute; top:0; bottom:0; width:100%; }
+  canvas#revealCanvas {
+    position:absolute;
+    top:0; left:0;
+    width:100%; height:100%;
+    pointer-events:none;
+    z-index:3;
+  }
+  .mapboxgl-popup { max-width:300px; font-family:Arial,sans-serif; }
+  .mapboxgl-popup img { width:100%; border-radius:4px; }
+</style>
 </head>
 <body>
-  <div id="map"></div>
+<div id="map"></div>
+<canvas id="revealCanvas"></canvas>
 
-  <script src="https://api.mapbox.com/mapbox-gl-js/v3.15.0/mapbox-gl.js"></script>
-  <script>
-    mapboxgl.accessToken = 'pk.eyJ1Ijoic25iZW5vaSIsImEiOiJjbWg5Y2IweTAwbnRzMm5xMXZrNnFnbmY5In0.Lza9yPTlMhbHE5zHNRb1aA';
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.15.0/mapbox-gl.js"></script>
+<script>
+mapboxgl.accessToken =
+  "pk.eyJ1Ijoic25iZW5vaSIsImEiOiJjbWg5Y2IweTAwbnRzMm5xMXZrNnFnbmY5In0.Lza9yPTlMhbHE5zHNRb1aA";
 
-    const map = new mapboxgl.Map({
-      container: 'map',
-      style: 'mapbox://styles/snbenoi/cmhjgr9hh000001rcf6cy38p0',
-      center: [-122.5078, 37.9694],
-      zoom: 13.5
-    });
+const map = new mapboxgl.Map({
+  container: "map",
+  style: "mapbox://styles/snbenoi/cmhjgr9hh000001rcf6cy38p0",
+  center: [-122.5078, 37.9694],
+  zoom: 13.5
+});
 
-    map.on('load', () => {
-      const corners = [
-        [-122.537464, 37.984078],
-        [-122.477353, 37.984108],
-        [-122.477370, 37.952203],
-        [-122.537475, 37.952208]
-      ];
+map.on("load", () => {
+  //base layers
+  const corners = [
+    [-122.537464, 37.984078],
+    [-122.477353, 37.984108],
+    [-122.477370, 37.952203],
+    [-122.537475, 37.952208]
+  ];
 
-      const underUrl = 'https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/SFCD%20underground.jpg';
-      const surfaceUrl = 'https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/SRCD%20surface.jpg';
+  const underUrl =
+    "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/SFCD%20underground.jpg";
+  const surfaceUrl =
+    "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/SRCD%20surface.jpg";
 
-      // underground layer
-      map.addSource('under-image', {
-        type: 'image',
-        url: underUrl,
-        coordinates: corners
-      });
-      map.addLayer({
-        id: 'under-layer',
-        type: 'raster',
-        source: 'under-image',
-        paint: { 'raster-opacity': 1 }
-      });
+  // bottom (underground)
+  map.addSource("under-image", {
+    type: "image",
+    url: underUrl,
+    coordinates: corners
+  });
+  map.addLayer({
+    id: "under-layer",
+    type: "raster",
+    source: "under-image",
+    paint: { "raster-opacity": 1 }
+  });
 
-      // landmarks (always visible)
-      map.addSource('landmarks', {
-        type: 'geojson',
-        data: 'https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/data/619data.geojson'
-      });
-      map.addLayer({
-        id: 'landmarks-layer',
-        type: 'circle',
-        source: 'landmarks',
-        paint: {
-          'circle-radius': 8,
-          'circle-color': '#FF5733',
-          'circle-stroke-width': 2,
-          'circle-stroke-color': '#fff'
-        }
-      });
+  // geojson points (on base)
+  map.addSource("landmarks", {
+    type: "geojson",
+    data: "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/data/619data.geojson"
+  });
+  map.addLayer({
+    id: "landmarks-layer",
+    type: "circle",
+    source: "landmarks",
+    paint: {
+      "circle-radius": 8,
+      "circle-color": "#FF5733",
+      "circle-stroke-width": 2,
+      "circle-stroke-color": "#fff"
+    }
+  });
 
-      // surface layer (top)
-      map.addSource('surface-image', {
-        type: 'image',
-        url: surfaceUrl,
-        coordinates: corners
-      });
-      map.addLayer({
-        id: 'surface-layer',
-        type: 'raster',
-        source: 'surface-image',
-        paint: { 'raster-opacity': 1 }
-      });
+  // overlay surface 
+  const revealCanvas = document.getElementById("revealCanvas");
+  const ctx = revealCanvas.getContext("2d");
+  const surfaceImg = new Image();
+  surfaceImg.crossOrigin = "anonymous";
+  surfaceImg.src = surfaceUrl;
 
-      // Popups
-      map.on('click', 'landmarks-layer', (e) => {
-        const f = e.features[0];
-        const p = f.properties;
-        const html = `
-          <h3>${p.title || 'Untitled'}</h3>
-          <p><strong>Address:</strong> ${p.address || ''}</p>
-          <p>${p.proposal || ''}</p>
-          ${p.image ? `<img src="${p.image}" alt="${p.title}">` : ''}
-        `;
-        new mapboxgl.Popup()
-          .setLngLat(f.geometry.coordinates)
-          .setHTML(html)
-          .addTo(map);
-      });
+  function resizeCanvas() {
+    revealCanvas.width = map.getContainer().clientWidth;
+    revealCanvas.height = map.getContainer().clientHeight;
+    drawSurface();
+  }
+  window.addEventListener("resize", resizeCanvas);
 
-      // Reveal mask effect
-      let haloRadius = 80;
-      let mouseLngLat = null;
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      canvas.width = 512;
-      canvas.height = 512;
+  surfaceImg.onload = () => {
+    resizeCanvas();
+    drawSurface();
+  };
 
-      function updateMask() {
-        const { width, height } = canvas;
-        ctx.clearRect(0, 0, width, height);
-        ctx.fillStyle = 'rgba(255,255,255,1)';
-        ctx.fillRect(0, 0, width, height);
+  let mouse = { x: -9999, y: -9999 };
+  let haloRadius = 100;
 
-        if (mouseLngLat) {
-          // convert mouse position to pixel coordinates
-          const p = map.project(mouseLngLat);
-          const x = (p.x / map.transform.width) * width;
-          const y = (p.y / map.transform.height) * height;
-          const gradient = ctx.createRadialGradient(x, y, haloRadius * 0.3, x, y, haloRadius);
-          gradient.addColorStop(0, 'rgba(255,255,255,0)');
-          gradient.addColorStop(1, 'rgba(255,255,255,1)');
-          ctx.fillStyle = gradient;
-          ctx.fillRect(0, 0, width, height);
-        }
-        const maskUrl = canvas.toDataURL();
-        map.setPaintProperty('surface-layer', 'raster-opacity', [
-          'interpolate',
-          ['linear'],
-          ['image', maskUrl],
-          0, 0,
-          1, 1
-        ]);
-      }
+  // track mouse position over map
+  map.getCanvasContainer().addEventListener("mousemove", (e) => {
+    const rect = map.getContainer().getBoundingClientRect();
+    mouse.x = e.clientX - rect.left;
+    mouse.y = e.clientY - rect.top;
+    drawSurface();
+  });
 
-      // fallback: static opacity until mouse moves
-      updateMask();
+  map.on("mouseenter", "landmarks-layer", () => {
+    map.getCanvas().style.cursor = "pointer";
+    haloRadius = 180;
+    drawSurface();
+  });
+  map.on("mouseleave", "landmarks-layer", () => {
+    map.getCanvas().style.cursor = "";
+    haloRadius = 100;
+    drawSurface();
+  });
 
-      map.on('mousemove', (e) => {
-        mouseLngLat = e.lngLat;
-        updateMask();
-      });
+  map.on("click", "landmarks-layer", (e) => {
+    const f = e.features[0];
+    const p = f.properties;
+    const html = `
+      <h3>${p.title || "Untitled"}</h3>
+      <p><strong>Address:</strong> ${p.address || ""}</p>
+      <p>${p.proposal || ""}</p>
+      ${p.image ? `<img src="${p.image}" alt="${p.title}">` : ""}
+    `;
+    new mapboxgl.Popup()
+      .setLngLat(f.geometry.coordinates)
+      .setHTML(html)
+      .addTo(map);
+  });
 
-      map.on('mouseenter', 'landmarks-layer', () => {
-        haloRadius = 160;
-        map.getCanvas().style.cursor = 'pointer';
-      });
-      map.on('mouseleave', 'landmarks-layer', () => {
-        haloRadius = 80;
-        map.getCanvas().style.cursor = '';
-      });
-    });
-  </script>
+  function drawSurface() {
+    if (!surfaceImg.complete) return;
+    const w = revealCanvas.width;
+    const h = revealCanvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    // stretched to map bounds
+    ctx.drawImage(surfaceImg, 0, 0, w, h);
+
+    // (soft edge gradient)
+    const grd = ctx.createRadialGradient(mouse.x, mouse.y, haloRadius * 0.6, mouse.x, mouse.y, haloRadius);
+    grd.addColorStop(0, "rgba(0,0,0,1)");
+    grd.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.fillStyle = grd;
+    ctx.beginPath();
+    ctx.arc(mouse.x, mouse.y, haloRadius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalCompositeOperation = "source-over";
+  }
+
+  // animate 
+  function loop() {
+    drawSurface();
+    requestAnimationFrame(loop);
+  }
+  loop();
+});
+</script>
 </body>
 </html>
