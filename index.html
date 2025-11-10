@@ -25,9 +25,10 @@
     left: 0;
     width: 100%;
     height: 100%;
-    pointer-events: none;
-    z-index: 2;
+    pointer-events: none; 
+    z-index: 2; 
   }
+
   .mapboxgl-popup {
     z-index: 5;
     max-width: 300px;
@@ -176,8 +177,8 @@
         const drawH = bl.y - tl.y;
 
         ctx.save();
-        ctx.setTransform((drawW / surfaceImg.width), 0, 0, (drawH / surfaceImg.height), tl.x, tl.y);
-        ctx.drawImage(surfaceImg, 0, 0);
+        ctx.translate(tl.x, tl.y);
+        ctx.drawImage(surfaceImg, 0, 0, drawW, drawH);
 
         ctx.globalCompositeOperation = "destination-out";
         const g = ctx.createRadialGradient(mouse.x, mouse.y, haloRadius * 0.5, mouse.x, mouse.y, haloRadius);
