@@ -176,16 +176,16 @@
         const drawH = bl.y - tl.y;
 
         ctx.save();
-        ctx.translate(tl.x, tl.y);
-        ctx.drawImage(surfaceImg, 0, 0, drawW, drawH);
+        ctx.setTransform((drawW / surfaceImg.width), 0, 0, (drawH / surfaceImg.height), tl.x, tl.y);
+        ctx.drawImage(surfaceImg, 0, 0);
 
         ctx.globalCompositeOperation = "destination-out";
-        const g = ctx.createRadialGradient(mouse.x - tl.x, mouse.y - tl.y, haloRadius * 0.5, mouse.x - tl.x, mouse.y - tl.y, haloRadius);
+        const g = ctx.createRadialGradient(mouse.x, mouse.y, haloRadius * 0.5, mouse.x, mouse.y, haloRadius);
         g.addColorStop(0, "rgba(255,255,255,1)");
         g.addColorStop(1, "rgba(255,255,255,0)");
         ctx.fillStyle = g;
         ctx.beginPath();
-        ctx.arc(mouse.x - tl.x, mouse.y - tl.y, haloRadius, 0, Math.PI * 2);
+        ctx.arc(mouse.x, mouse.y, haloRadius, 0, Math.PI * 2);
         ctx.fill();
         ctx.globalCompositeOperation = "source-over";
         ctx.restore();
