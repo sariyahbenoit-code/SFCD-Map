@@ -25,10 +25,12 @@
     left: 0;
     width: 100%;
     height: 100%;
-    pointer-events: none; /* lets you still interact with the map */
-    z-index: 2;
+    pointer-events: none; 
+    z-index: 2; 
   }
+
   .mapboxgl-popup {
+    z-index: 5;
     max-width: 300px;
     font-family: Arial, sans-serif;
   }
@@ -62,15 +64,12 @@
         [-122.537475, 37.952208]
       ];
 
-      // image URLs
       const underUrl = "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/SFCD%20underground.jpg";
       const surfaceUrl = "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/SRCD%20surface.jpg";
 
-      // Base (underground)
       map.addSource("under-image", { type: "image", url: underUrl, coordinates: corners });
       map.addLayer({ id: "under-layer", type: "raster", source: "under-image", paint: { "raster-opacity": 1 } });
 
-      // ====== Landmark data ======
       const landmarks = {
         "type": "FeatureCollection",
         "features": [
@@ -107,7 +106,6 @@
         ]
       };
 
-      // Landmarks source + layer
       map.addSource('landmarks', { type: 'geojson', data: landmarks });
       map.addLayer({
         id: 'landmarks-layer',
@@ -115,13 +113,12 @@
         source: 'landmarks',
         paint: {
           'circle-radius': 8,
-          'circle-color': '#FF5733',
+          'circle-color': '#ffffff', 
           'circle-stroke-width': 2,
-          'circle-stroke-color': '#fff'
+          'circle-stroke-color': '#000000'
         }
       });
 
-      // Popups
       map.on('click', 'landmarks-layer', (e) => {
         const f = e.features[0];
         const p = f.properties;
@@ -131,7 +128,7 @@
           <p>${p.proposal}</p>
           <img src="${p.image}" alt="${p.title}">
         `;
-        new mapboxgl.Popup()
+        new mapboxgl.Popup({ closeButton: true, closeOnClick: true })
           .setLngLat(f.geometry.coordinates)
           .setHTML(html)
           .addTo(map);
@@ -140,7 +137,6 @@
       map.on('mouseenter', 'landmarks-layer', () => map.getCanvas().style.cursor = 'pointer');
       map.on('mouseleave', 'landmarks-layer', () => map.getCanvas().style.cursor = '');
 
-      // ====== Surface overlay + reveal effect ======
       const surfaceCanvas = document.getElementById("surfaceCanvas");
       const ctx = surfaceCanvas.getContext("2d", { alpha: true });
       const surfaceImg = new Image();
@@ -158,12 +154,11 @@
       window.addEventListener("resize", resizeCanvas);
 
       map.getCanvasContainer().addEventListener("mousemove", (e) => {
-        const rect = map.getContainer().getBoundingClientRect();
+        const rect = surfaceCanvas.getBoundingClientRect();
         mouse.x = e.clientX - rect.left;
         mouse.y = e.clientY - rect.top;
       });
 
-      // get pixel coordinates of the map corners for alignment
       function getScreenCoords() {
         const tl = map.project(corners[0]);
         const tr = map.project(corners[1]);
@@ -185,7 +180,6 @@
         ctx.translate(tl.x, tl.y);
         ctx.drawImage(surfaceImg, 0, 0, drawW, drawH);
 
-        // Erase the halo area (reveal under map)
         ctx.globalCompositeOperation = "destination-out";
         const g = ctx.createRadialGradient(mouse.x, mouse.y, haloRadius * 0.5, mouse.x, mouse.y, haloRadius);
         g.addColorStop(0, "rgba(255,255,255,1)");
