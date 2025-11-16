@@ -10,7 +10,6 @@ const map = new mapboxgl.Map({
 });
 
 map.on("load", () => {
-
   const bridgeImageURL = "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/proposal%20for%20a%20bridge.png";
 
   const bridgeCorners = [
@@ -83,26 +82,14 @@ map.on("load", () => {
     }
   });
 
-  map.on("click", "landmarks-layer", (e) => {
+  map.on("click", "landmarks-layer", function(e) {
     const p = e.features[0].properties;
-    const html =
-      "<h3>" + p.title + "</h3>" +
-      "<p><strong>Address:</strong> " + p.address + "</p>" +
-      "<p>" + p.proposal + "</p>" +
-      "<img src='" + p.image + "'>";
-    new mapboxgl.Popup()
-      .setLngLat(e.features[0].geometry.coordinates)
-      .setHTML(html)
-      .addTo(map);
+    const html = "<h3>" + p.title + "</h3><p><strong>Address:</strong> " + p.address + "</p><p>" + p.proposal + "</p><img src='" + p.image + "'>";
+    new mapboxgl.Popup().setLngLat(e.features[0].geometry.coordinates).setHTML(html).addTo(map);
   });
 
-  map.on("mouseenter", "landmarks-layer", () => {
-    map.getCanvas().style.cursor = "pointer";
-  });
-
-  map.on("mouseleave", "landmarks-layer", () => {
-    map.getCanvas().style.cursor = "";
-  });
+  map.on("mouseenter", "landmarks-layer", function() { map.getCanvas().style.cursor = "pointer"; });
+  map.on("mouseleave", "landmarks-layer", function() { map.getCanvas().style.cursor = ""; });
 
   const forebayRect = {
     topLeft: [-122.521122, 37.967225],
@@ -129,7 +116,6 @@ map.on("load", () => {
     id: "forebay-3d",
     type: "custom",
     renderingMode: "3d",
-
     onAdd: function(map, gl) {
       this.camera = new THREE.Camera();
       this.scene = new THREE.Scene();
@@ -142,15 +128,14 @@ map.on("load", () => {
       light2.position.set(-10, -10, 50);
       this.scene.add(light2);
 
-      rhino3dm().then((rhino) => {
+      rhino3dm().then(function() {
         const loader = new THREE.ThreeDMLoader();
-        loader.setLibraryPath("https://cdn.jsdelivr.net/npm/rhino3dm@7.15.0/");
         loader.load(
           "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/forebay%20shapes.3dm",
-          (object) => {
+          function(object) {
             object.scale.set(0.5, 0.5, 0.5);
             object.rotation.x = Math.PI;
-            this.scene.add(object);
+            custom3DLayer.scene.add(object);
           }
         );
       });
@@ -162,13 +147,11 @@ map.on("load", () => {
       });
       this.renderer.autoClear = false;
     },
-
     render: function(gl, matrix) {
       const m = new THREE.Matrix4().fromArray(matrix);
       const l = new THREE.Matrix4()
         .makeTranslation(modelTransform.translateX, modelTransform.translateY, modelTransform.translateZ)
         .scale(new THREE.Vector3(modelTransform.scale, -modelTransform.scale, modelTransform.scale));
-
       this.camera.projectionMatrix = m.multiply(l);
       this.renderer.resetState();
       this.renderer.render(this.scene, this.camera);
