@@ -1,163 +1,97 @@
-mapboxgl.accessToken = "pk.eyJ1Ijoic25iZW5vaSIsImEiOiJjbWg5Y2IweTAwbnRzMm5xMXZrNnFnbmY5In0.Lza9yPTlMhbHE5zHNRb1aA";
+import * as THREE from "https://unpkg.com/three@0.160.0/build/three.module.js";
+import { GLTFLoader } from "https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js";
+
+mapboxgl.accessToken = 'pk.eyJ1Ijoic25iZW5vaSIsImEiOiJjbWg5Y2IweTAwbnRzMm5xMXZrNnFnbmY5In0.Lza9yPTlMhbHE5zHNRb1aA';
 
 const map = new mapboxgl.Map({
-  container: "map",
-  style: "mapbox://styles/mapbox/satellite-streets-v12",
-  center: [-122.5125, 37.9679],
-  zoom: 13,
-  pitch: 60,
-  antialias: true
+    container: 'map',
+    style: 'mapbox://styles/mapbox/satellite-v9',
+    center: [-122.5203, 37.9669],
+    zoom: 16,
+    pitch: 60,
+    antialias: true
 });
 
-map.on("load", () => {
-  const bridgeImageURL = "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/proposal%20for%20a%20bridge.png";
-
-  const bridgeCorners = [
+const baseCorners = [
     [-122.533714, 37.980356],
     [-122.463267, 37.980358],
-    [-122.463250, 37.953542],
-    [-122.533711, 37.953537]
-  ];
+    [-122.463263, 37.951097],
+    [-122.533717, 37.951092]
+];
 
-  map.addSource("bridge-image", {
-    type: "image",
-    url: bridgeImageURL,
-    coordinates: bridgeCorners
-  });
+map.on("load", () => {
+    map.addSource("proposal-image", {
+        type: "image",
+        url: "assets/images/proposal for a bridge.png",
+        coordinates: baseCorners
+    });
 
-  map.addLayer({
-    id: "bridge-layer",
-    type: "raster",
-    source: "bridge-image",
-    paint: { "raster-opacity": 1 }
-  });
+    map.addLayer({
+        id: "proposal-layer",
+        type: "raster",
+        source: "proposal-image",
+        paint: { "raster-opacity": 1 }
+    });
 
-  const landmarks = {
-    type: "FeatureCollection",
-    features: [
-      {
-        type: "Feature",
-        properties: {
-          title: "Floating Housing",
-          address: "555 Francisco Blvd E, San Rafael, CA 94901",
-          proposal: "Floating homes as liveaboard replacement.",
-          image: "https://riyahniko.com/wp-content/uploads/2025/11/Screenshot-2025-11-03-at-9.43.05-AM.png"
+    const tl = [-122.521122, 37.967225];
+    const tr = [-122.519669, 37.967222];
+    const bl = [-122.521117, 37.966492];
+    const br = [-122.519678, 37.966486];
+
+    const centerLng = (tl[0] + tr[0] + bl[0] + br[0]) / 4;
+    const centerLat = (tl[1] + tr[1] + bl[1] + br[1]) / 4;
+
+    const merc = mapboxgl.MercatorCoordinate.fromLngLat([centerLng, centerLat], 0);
+
+    const dx = tr[0] - tl[0];
+    const dy = tr[1] - tl[1];
+    const angle = Math.atan2(dy, dx);
+
+    const widthMeters =  ((dx*111320*Math.cos(centerLat*Math.PI/180))**2 + (dy*110540)**2) ** 0.5;
+
+    const loader = new GLTFLoader();
+    let scene, camera, renderer;
+
+    const customLayer = {
+        id: "gltf-model",
+        type: "custom",
+        renderingMode: "3d",
+        onAdd: function () {
+            camera = new THREE.Camera();
+            scene = new THREE.Scene();
+
+            const light1 = new THREE.DirectionalLight(0xffffff, 1);
+            light1.position.set(0, 100, 100);
+            scene.add(light1);
+
+            const light2 = new THREE.DirectionalLight(0xffffff, 1);
+            light2.position.set(0, -100, 100);
+            scene.add(light2);
+
+            loader.load("assets/images/forebay gltf.gltf", (gltf) => {
+                const model = gltf.scene;
+                model.rotation.z = angle;
+                model.position.set(merc.x, merc.y, merc.z);
+                model.scale.set(widthMeters, widthMeters, widthMeters);
+                scene.add(model);
+            });
+
+            renderer = new THREE.WebGLRenderer({
+                canvas: map.getCanvas(),
+                context: map.painter.context.gl,
+                antialias: true
+            });
+
+            renderer.autoClear = false;
         },
-        geometry: { type: "Point", coordinates: [-122.5036, 37.972] }
-      },
-      {
-        type: "Feature",
-        properties: {
-          title: "Municipally Leased Storage",
-          address: "616 Canal St, San Rafael, CA 94901",
-          proposal: "Space for emergency supply storage.",
-          image: "https://riyahniko.com/wp-content/uploads/2025/11/Screenshot-2025-11-03-at-9.42.42-AM.png"
-        },
-        geometry: { type: "Point", coordinates: [-122.5078, 37.9694] }
-      },
-      {
-        type: "Feature",
-        properties: {
-          title: "Solar Powered Pump Station",
-          address: "555 Francisco Blvd W, San Rafael, CA 94901",
-          proposal: "Vegetated forebay with solar pumping.",
-          image: "https://riyahniko.com/wp-content/uploads/2025/11/fisheye-after-2048x1536.jpeg"
-        },
-        geometry: { type: "Point", coordinates: [-122.5115, 37.9675] }
-      }
-    ]
-  };
+        render: function (gl, matrix) {
+            const m = new THREE.Matrix4().fromArray(matrix);
+            camera.projectionMatrix = m;
+            renderer.resetState();
+            renderer.render(scene, camera);
+            map.triggerRepaint();
+        }
+    };
 
-  map.addSource("landmarks", { type: "geojson", data: landmarks });
-
-  map.addLayer({
-    id: "landmarks-layer",
-    type: "circle",
-    source: "landmarks",
-    paint: {
-      "circle-radius": 8,
-      "circle-color": "#ffffff",
-      "circle-stroke-width": 2,
-      "circle-stroke-color": "#000000"
-    }
-  });
-
-  map.on("click", "landmarks-layer", function(e) {
-    const p = e.features[0].properties;
-    const html = "<h3>" + p.title + "</h3><p><strong>Address:</strong> " + p.address + "</p><p>" + p.proposal + "</p><img src='" + p.image + "'>";
-    new mapboxgl.Popup().setLngLat(e.features[0].geometry.coordinates).setHTML(html).addTo(map);
-  });
-
-  map.on("mouseenter", "landmarks-layer", function() { map.getCanvas().style.cursor = "pointer"; });
-  map.on("mouseleave", "landmarks-layer", function() { map.getCanvas().style.cursor = ""; });
-
-  const forebayRect = {
-    topLeft: [-122.521122, 37.967225],
-    topRight: [-122.519669, 37.967222],
-    botLeft: [-122.521122, 37.966491],
-    botRight: [-122.519671, 37.966494]
-  };
-
-  const modelOrigin = [
-    (forebayRect.topLeft[0] + forebayRect.topRight[0]) / 2,
-    (forebayRect.topLeft[1] + forebayRect.botLeft[1]) / 2
-  ];
-
-  const modelMerc = mapboxgl.MercatorCoordinate.fromLngLat(modelOrigin, 0);
-
-  const modelTransform = {
-    translateX: modelMerc.x,
-    translateY: modelMerc.y,
-    translateZ: 0,
-    scale: modelMerc.meterInMercatorCoordinateUnits()
-  };
-
-  const custom3DLayer = {
-    id: "forebay-3d",
-    type: "custom",
-    renderingMode: "3d",
-    onAdd: function(map, gl) {
-      this.camera = new THREE.Camera();
-      this.scene = new THREE.Scene();
-
-      const light1 = new THREE.DirectionalLight(0xffffff, 1);
-      light1.position.set(10, 10, 50);
-      this.scene.add(light1);
-
-      const light2 = new THREE.DirectionalLight(0xffffff, 1);
-      light2.position.set(-10, -10, 50);
-      this.scene.add(light2);
-
-      rhino3dm().then(function() {
-        const loader = new THREE.ThreeDMLoader();
-        loader.load(
-          "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/forebay%20shapes.3dm",
-          function(object) {
-            object.scale.set(0.5, 0.5, 0.5);
-            object.rotation.x = Math.PI;
-            custom3DLayer.scene.add(object);
-          }
-        );
-      });
-
-      this.renderer = new THREE.WebGLRenderer({
-        canvas: map.getCanvas(),
-        context: gl,
-        antialias: true
-      });
-      this.renderer.autoClear = false;
-    },
-    render: function(gl, matrix) {
-      const m = new THREE.Matrix4().fromArray(matrix);
-      const l = new THREE.Matrix4()
-        .makeTranslation(modelTransform.translateX, modelTransform.translateY, modelTransform.translateZ)
-        .scale(new THREE.Vector3(modelTransform.scale, -modelTransform.scale, modelTransform.scale));
-      this.camera.projectionMatrix = m.multiply(l);
-      this.renderer.resetState();
-      this.renderer.render(this.scene, this.camera);
-      map.triggerRepaint();
-    }
-  };
-
-  map.addLayer(custom3DLayer);
+    map.addLayer(customLayer);
 });
