@@ -15,7 +15,7 @@ const MapboxExample = () => {
       container: mapContainerRef.current,
       style: 'mapbox://styles/mapbox/standard',
       config: { basemap: { theme: 'monochrome' }},
-      zoom: 12,
+      zoom: 20,
       center: [-122.51465, 37.96558],  // your required coordinates
       pitch: 60,
       antialias: true
