@@ -10,7 +10,6 @@ const map = new mapboxgl.Map({
     antialias: true
 });
 
-// 3D model information
 const modelData = [
     {
         coords: [-122.5115, 37.9675],
@@ -38,7 +37,6 @@ map.on('load', async () => {
 
     const THREE = window.THREE;
 
-    // Custom layer
     const customLayer = {
         id: '3d-models',
         type: 'custom',
@@ -47,7 +45,6 @@ map.on('load', async () => {
             this.camera = new THREE.Camera();
             this.scene = new THREE.Scene();
 
-            // Lights
             const light = new THREE.DirectionalLight(0xffffff, 0.8);
             light.position.set(0, -70, 100).normalize();
             this.scene.add(light);
@@ -56,9 +53,13 @@ map.on('load', async () => {
             light2.position.set(0, 70, 100).normalize();
             this.scene.add(light2);
 
-            this.renderer = new THREE.WebGLRenderer({ alpha: true });
+            this.renderer = new THREE.WebGLRenderer({
+                canvas: map.getCanvas(),
+                context: gl,
+                antialias: true
+            });
+
             this.renderer.autoClear = false;
-            this.renderer.setSize(map.getCanvas().width, map.getCanvas().height);
 
             this.models = [];
 
@@ -81,7 +82,6 @@ map.on('load', async () => {
                         coords: m.coords
                     });
 
-                    // Add HTML label
                     const labelDiv = document.createElement('div');
                     labelDiv.className = 'model-label';
                     labelDiv.innerText = m.label;
@@ -96,7 +96,6 @@ map.on('load', async () => {
             this.renderer.render(this.scene, this.camera);
             map.triggerRepaint();
 
-            // Update label positions
             labels.forEach(l => {
                 const pos = map.project(l.coords);
                 l.div.style.left = pos.x + 'px';
@@ -107,7 +106,6 @@ map.on('load', async () => {
 
     map.addLayer(customLayer);
 
-    // Click popups
     map.on('click', (e) => {
         const mouse = [e.lngLat.lng, e.lngLat.lat];
         let clicked = null;
@@ -136,7 +134,6 @@ map.on('load', async () => {
         }
     });
 
-    // Layer toggles
     document.getElementById('toggle-models').addEventListener('change', (e) => {
         if (customLayer.scene) customLayer.scene.visible = e.target.checked;
     });
