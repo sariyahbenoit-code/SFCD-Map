@@ -117,22 +117,15 @@ map.on('load', async () => {
 
         if (clicked) {
             const props = clicked.data.properties;
+
             const html = `
-                <h3>${props.title || clicked.label}</h3>
-                <p><strong>Address:</strong> ${props.address || 'N/A'}</p>
-                <p>${props.proposal || 'N/A'}</p>
+                <h3>${props.Landmark || clicked.label}</h3>
+                <p><strong>Address:</strong> ${props.Address || 'N/A'}</p>
+                <p>${props.Proposal || 'N/A'}</p>
                 <p><strong>Coordinates:</strong> ${clicked.coords[1].toFixed(6)}, ${clicked.coords[0].toFixed(6)}</p>
             `;
+
             new mapboxgl.Popup().setLngLat(clicked.coords).setHTML(html).addTo(map);
-            document.getElementById('feature-info').innerHTML = html;
         }
-    });
-
-    document.getElementById('toggle-models').addEventListener('change', (e) => {
-        if (customLayer.scene) customLayer.scene.visible = e.target.checked;
-    });
-
-    document.getElementById('toggle-labels').addEventListener('change', (e) => {
-        labels.forEach(l => l.div.style.display = e.target.checked ? 'block' : 'none');
     });
 });
