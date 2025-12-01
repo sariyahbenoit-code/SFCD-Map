@@ -3,146 +3,155 @@ mapboxgl.accessToken = 'pk.eyJ1Ijoic25iZW5vaSIsImEiOiJjbWg5Y2IweTAwbnRzMm5xMXZrN
 const map = new mapboxgl.Map({
     container: 'map',
     style: 'mapbox://styles/mapbox/standard',
-    zoom: 17, // zoomed out more
-    center: [-122.51465, 37.96558],
+    center: [-122.5125, 37.9679],
+    zoom: 13, // zoomed out a bit from previous 12
     pitch: 60,
+    bearing: 0,
     antialias: true
 });
 
-map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true, showCompass: true }), 'top-right');
-
-// 3D model points with labels
-const modelPoints = [
+const modelData = [
     {
         coords: [-122.5115, 37.9675],
-        model: "assets/images/pond_pack.glb",
-        label: "Solar Powered Forebay and Extended Marsh Edge"
+        glb: 'https://sariyahbenoit-code.github.io/SRCD-Map/assets/images/pond_pack.glb',
+        label: 'Solar Powered Forebay and Extended Marsh Edge'
     },
     {
-        coords: [-122.537464, 37.984078],
-        model: "assets/images/bench.glb",
-        label: "Multipurpose seating"
+        coords: [-122.5374, 37.9841],
+        glb: 'https://sariyahbenoit-code.github.io/SRCD-Map/assets/images/bench.glb',
+        label: 'Multipurpose seating'
     },
     {
-        coords: [-122.477353, 37.984108],
-        model: "assets/images/closet.glb",
-        label: "Storage units converted into Emergency Supply Inventory"
+        coords: [-122.5036, 37.972],
+        glb: 'https://sariyahbenoit-code.github.io/SRCD-Map/assets/images/closet.glb',
+        label: 'Storage units converted into Emergency Supply Inventory'
     }
 ];
 
-let featureData = null;
+const labels = [];
 
-// Load geojson
-fetch('data/619data.geojson')
-    .then(res => res.json())
-    .then(data => { featureData = data; initializeMap(); });
+map.on('load', () => {
 
-function initializeMap() {
-    map.on('load', () => {
-        map.addSource("landmarks", { type: "geojson", data: featureData });
+    fetch('https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/data/619data.geojson')
+        .then(res => res.json())
+        .then(geojson => {
 
-        map.addLayer({
-            id: "landmarks-layer",
-            type: "circle",
-            source: "landmarks",
-            paint: {
-                "circle-radius": 0,
-                "circle-color": "#ffffff",
-                "circle-opacity": 0
-            }
-        });
+            const THREE = window.THREE;
 
-        add3DModels();
-    });
-}
+            const customLayer = {
+                id: '3d-models',
+                type: 'custom',
+                renderingMode: '3d',
+                onAdd: function(map, gl) {
+                    this.camera = new THREE.Camera();
+                    this.scene = new THREE.Scene();
 
-function add3DModels() {
-    const THREE = window.THREE;
-    const labels = [];
+                    const directionalLight = new THREE.DirectionalLight(0xffffff);
+                    directionalLight.position.set(0, -70, 100).normalize();
+                    this.scene.add(directionalLight);
 
-    modelPoints.forEach((point, idx) => {
-        const mc = mapboxgl.MercatorCoordinate.fromLngLat(point.coords, 0);
-        const scale = mc.meterInMercatorCoordinateUnits() * 50;
+                    const directionalLight2 = new THREE.DirectionalLight(0xffffff);
+                    directionalLight2.position.set(0, 70, 100).normalize();
+                    this.scene.add(directionalLight2);
 
-        const scene = new THREE.Scene();
-        const camera = new THREE.Camera();
-        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-        renderer.setSize(map.getCanvas().width, map.getCanvas().height);
-        renderer.domElement.style.position = 'absolute';
-        renderer.domElement.style.top = '0';
-        renderer.domElement.style.left = '0';
-        renderer.domElement.style.pointerEvents = 'none';
-        document.body.appendChild(renderer.domElement);
+                    this.renderer = new THREE.WebGLRenderer({
+                        canvas: map.getCanvas(),
+                        context: gl,
+                        antialias: true
+                    });
+                    this.renderer.autoClear = false;
 
-        const light1 = new THREE.DirectionalLight(0xffffff, 1);
-        light1.position.set(0, -70, 100).normalize();
-        scene.add(light1);
-        const light2 = new THREE.DirectionalLight(0xffffff, 1);
-        light2.position.set(0, 70, 100).normalize();
-        scene.add(light2);
+                    this.models = [];
 
-        const loader = new THREE.GLTFLoader();
-        let model;
-        loader.load(point.model, gltf => {
-            model = gltf.scene;
-            model.scale.set(scale, scale, scale);
-            model.position.set(mc.x, mc.y, mc.z);
-            scene.add(model);
-        });
+                    const loader = new THREE.GLTFLoader();
 
-        const label = document.createElement('div');
-        label.className = 'model-label';
-        label.textContent = point.label;
-        document.body.appendChild(label);
-        labels.push({ label, coords: point.coords });
+                    modelData.forEach((modelPoint, index) => {
+                        loader.load(modelPoint.glb, (gltf) => {
+                            const sceneModel = gltf.scene;
 
-        map.on('render', () => {
-            if (!model) return;
-            renderer.render(scene, camera);
+                            const merc = mapboxgl.MercatorCoordinate.fromLngLat(
+                                modelPoint.coords, 0
+                            );
 
-            labels.forEach(l => {
-                const pos = map.project(l.coords);
-                l.label.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
-            });
-        });
+                            const scale = merc.meterInMercatorCoordinateUnits();
+                            sceneModel.scale.set(scale * 0.05, scale * 0.05, scale * 0.05);
 
-        // Click event for 3D models
-        renderer.domElement.addEventListener('click', e => {
-            // Find the nearest feature from geojson by distance
-            if (!featureData) return;
-            let closestFeature = null;
-            let minDist = Infinity;
-            featureData.features.forEach(f => {
-                const lng = f.geometry.coordinates[0];
-                const lat = f.geometry.coordinates[1];
-                const dist = Math.sqrt(Math.pow(lat - point.coords[1], 2) + Math.pow(lng - point.coords[0], 2));
-                if (dist < minDist) {
-                    minDist = dist;
-                    closestFeature = f;
+                            sceneModel.position.set(merc.x, merc.y, merc.z);
+
+                            this.scene.add(sceneModel);
+                            this.models.push({
+                                mesh: sceneModel,
+                                data: geojson.features[index],
+                                label: modelPoint.label,
+                                coords: modelPoint.coords
+                            });
+
+                            const labelDiv = document.createElement('div');
+                            labelDiv.className = 'model-label';
+                            labelDiv.innerText = modelPoint.label;
+                            document.body.appendChild(labelDiv);
+                            labels.push({ div: labelDiv, coords: modelPoint.coords });
+                        });
+                    });
+                },
+                render: function(gl, matrix) {
+                    const m = new THREE.Matrix4().fromArray(matrix);
+                    this.models && this.models.forEach((mObj) => {
+                        // can add per-model rotation if desired
+                    });
+
+                    this.camera.projectionMatrix = m;
+                    this.renderer.resetState();
+                    this.renderer.render(this.scene, this.camera);
+                    map.triggerRepaint();
+
+                    // Update HTML labels
+                    labels.forEach(l => {
+                        const pos = map.project(l.coords);
+                        l.div.style.left = pos.x + 'px';
+                        l.div.style.top = pos.y + 'px';
+                    });
+                }
+            };
+
+            map.addLayer(customLayer);
+
+            map.on('click', (e) => {
+                const mouseLngLat = [e.lngLat.lng, e.lngLat.lat];
+                let clickedFeature = null;
+
+                customLayer.models.forEach((mObj) => {
+                    const dist = Math.sqrt(
+                        Math.pow(mouseLngLat[0] - mObj.coords[0], 2) +
+                        Math.pow(mouseLngLat[1] - mObj.coords[1], 2)
+                    );
+                    if(dist < 0.001) clickedFeature = mObj;
+                });
+
+                if(clickedFeature) {
+                    const props = clickedFeature.data.properties;
+                    const html = `
+                        <h3>${props.title || clickedFeature.label}</h3>
+                        <p><strong>Address:</strong> ${props.address || 'N/A'}</p>
+                        <p>${props.proposal || 'N/A'}</p>
+                        <p><strong>Coordinates:</strong> ${clickedFeature.coords[1].toFixed(6)}, ${clickedFeature.coords[0].toFixed(6)}</p>
+                    `;
+                    new mapboxgl.Popup()
+                        .setLngLat(clickedFeature.coords)
+                        .setHTML(html)
+                        .addTo(map);
+
+                    document.getElementById('feature-info').innerHTML = html;
                 }
             });
 
-            if (!closestFeature) return;
+            // Layer toggle controls
+            document.getElementById('toggle-models').addEventListener('change', (e) => {
+                customLayer.scene.visible = e.target.checked;
+            });
 
-            const props = closestFeature.properties;
-            const html = `
-                <h3>${props.title || 'No Title'}</h3>
-                ${props.address ? `<p><strong>Address:</strong> ${props.address}</p>` : ''}
-                ${props.proposal ? `<p>${props.proposal}</p>` : ''}
-                <p><strong>Coordinates:</strong> ${point.coords[1].toFixed(5)}, ${point.coords[0].toFixed(5)}</p>
-            `;
-            new mapboxgl.Popup().setLngLat(point.coords).setHTML(html).addTo(map);
-            document.getElementById('featureInfo').innerHTML = html;
+            document.getElementById('toggle-labels').addEventListener('change', (e) => {
+                labels.forEach(l => l.div.style.display = e.target.checked ? 'block' : 'none');
+            });
         });
-    });
-}
-
-// Layer toggles
-document.getElementById('toggle3D').addEventListener('change', e => {
-    const visible = e.target.checked;
-    document.querySelectorAll('canvas').forEach(c => c.style.display = visible ? 'block' : 'none');
-});
-document.getElementById('toggleLabels').addEventListener('change', e => {
-    const visible = e.target.checked;
-    document.querySelectorAll('.model-label').forEach(l => l.style.display = visible ? 'block' : 'none');
 });
