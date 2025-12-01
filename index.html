@@ -16,8 +16,6 @@ html, body {
     margin: 0;
     height: 100%;
     overflow: hidden;
-    background: transparent;
-    font-family: Arial, sans-serif;
 }
 #map {
     position: absolute;
@@ -34,9 +32,21 @@ html, body {
     pointer-events: none;
     z-index: 2;
 }
-.mapboxgl-popup {
-    z-index: 8;
-    max-width: 300px;
+#layerTogglePanel {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    padding: 8px 10px;
+    background: white;
+    border-radius: 6px;
+    z-index: 10;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    font-family: Arial;
+}
+#layerTogglePanel label {
+    display: block;
+    cursor: pointer;
+    margin-bottom: 6px;
 }
 </style>
 </head>
@@ -44,6 +54,12 @@ html, body {
 <body>
 <div id="map"></div>
 <canvas id="surfaceCanvas"></canvas>
+
+<div id="layerTogglePanel">
+    <label><input type="checkbox" id="toggleSites" checked> Sites</label>
+    <label><input type="checkbox" id="toggle3D" checked> 3D Models</label>
+    <label><input type="checkbox" id="toggleSurface" checked> Surface Halo</label>
+</div>
 
 <script>
 mapboxgl.accessToken = "pk.eyJ1Ijoic25iZW5vaSIsImEiOiJjbWg5Y2IweTAwbnRzMm5xMXZrNnFnbmY5In0.Lza9yPTlMhbHE5zHNRb1aA";
@@ -54,11 +70,11 @@ const map = new mapboxgl.Map({
     center: [-122.5125, 37.9679],
     zoom: 19,
     pitch: 60,
-    bearing: 0,
     antialias: true
 });
 
 map.on("load", () => {
+
     const corners = [
         [-122.537464, 37.984078],
         [-122.477353, 37.984108],
@@ -66,73 +82,53 @@ map.on("load", () => {
         [-122.537475, 37.952208]
     ];
 
-    const underUrl = "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/SFCD%20underground.jpg?raw=1";
-    const surfaceUrl = "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/SRCD%20surface.jpg?raw=1";
-
-    map.addSource("under-image", {
-        type: "image",
-        url: underUrl,
-        coordinates: corners
-    });
-
-    map.addLayer({
-        id: "under-layer",
-        type: "raster",
-        source: "under-image"
-    });
-
     const surfaceCanvas = document.getElementById("surfaceCanvas");
     const ctx = surfaceCanvas.getContext("2d", { alpha: true });
-
     const surfaceImg = new Image();
-    surfaceImg.crossOrigin = "anonymous";
-    surfaceImg.src = surfaceUrl;
+    surfaceImg.src = "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/SRCD%20surface.jpg?raw=1";
 
     let mouse = { x: -9999, y: -9999 };
-    let haloRadius = 120;
+    let haloRadius = 140;
 
     function resizeCanvas() {
         surfaceCanvas.width = map.getContainer().clientWidth;
         surfaceCanvas.height = map.getContainer().clientHeight;
     }
-
     resizeCanvas();
     window.addEventListener("resize", resizeCanvas);
 
     map.getCanvasContainer().addEventListener("mousemove", (e) => {
-        const rect = surfaceCanvas.getBoundingClientRect();
-        mouse.x = e.clientX - rect.left;
-        mouse.y = e.clientY - rect.top;
+        const r = surfaceCanvas.getBoundingClientRect();
+        mouse.x = e.clientX - r.left;
+        mouse.y = e.clientY - r.top;
     });
 
-    function getScreenCoords() {
-        const tl = map.project(corners[0]);
-        const tr = map.project(corners[1]);
-        const bl = map.project(corners[3]);
-        return { tl, tr, bl };
+    function projectedRect() {
+        return {
+            tl: map.project(corners[0]),
+            tr: map.project(corners[1]),
+            bl: map.project(corners[3])
+        };
     }
 
     function drawSurface() {
         if (!surfaceImg.complete) return;
-
         const w = surfaceCanvas.width;
         const h = surfaceCanvas.height;
-
         ctx.clearRect(0, 0, w, h);
 
-        const s = getScreenCoords();
-        const drawW = s.tr.x - s.tl.x;
-        const drawH = s.bl.y - s.tl.y;
+        const p = projectedRect();
+        const drawW = p.tr.x - p.tl.x;
+        const drawH = p.bl.y - p.tl.y;
 
         ctx.save();
-        ctx.translate(s.tl.x, s.tl.y);
+        ctx.translate(p.tl.x, p.tl.y);
         ctx.drawImage(surfaceImg, 0, 0, drawW, drawH);
 
         ctx.globalCompositeOperation = "destination-out";
         const g = ctx.createRadialGradient(mouse.x, mouse.y, haloRadius * 0.3, mouse.x, mouse.y, haloRadius);
         g.addColorStop(0, "rgba(255,255,255,1)");
         g.addColorStop(1, "rgba(255,255,255,0)");
-
         ctx.fillStyle = g;
         ctx.beginPath();
         ctx.arc(mouse.x, mouse.y, haloRadius, 0, Math.PI * 2);
@@ -141,7 +137,7 @@ map.on("load", () => {
     }
 
     function animateCanvas() {
-        drawSurface();
+        if (document.getElementById("toggleSurface").checked) drawSurface();
         requestAnimationFrame(animateCanvas);
     }
     animateCanvas();
@@ -149,6 +145,7 @@ map.on("load", () => {
     fetch("https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/data/619data.geojson?raw=1")
         .then(r => r.json())
         .then(geojson => {
+
             map.addSource("sites", { type: "geojson", data: geojson });
 
             map.addLayer({
@@ -157,91 +154,129 @@ map.on("load", () => {
                 source: "sites",
                 paint: {
                     "circle-radius": 10,
-                    "circle-color": "#ff6600"
+                    "circle-color": "#ff6600",
+                    "circle-stroke-width": 2,
+                    "circle-stroke-color": "#000"
                 }
             });
 
             map.on("click", "sites-points", (e) => {
                 const f = e.features[0];
                 const p = f.properties;
-
                 const html =
                     "<h3>" + p.Title + "</h3>" +
                     "<p>" + p.Description + "</p>" +
                     "<p>Coordinates: " + f.geometry.coordinates.join(", ") + "</p>";
-
                 new mapboxgl.Popup()
                     .setLngLat(f.geometry.coordinates)
                     .setHTML(html)
                     .addTo(map);
             });
 
-            const feats = geojson.features;
-            const sorted = [...feats].sort((a, b) => a.geometry.coordinates[1] - b.geometry.coordinates[1]);
+            const glbSouth = "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/pond_pack.glb?raw=1";
+            const glbNW = "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/bench.glb?raw=1";
+            const glbNE = "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/closet.glb?raw=1";
 
-            const south = sorted[0];
-            const north = sorted[2];
-            const mid = sorted[1];
+            const feats = geojson.features.slice().sort((a, b) => a.geometry.coordinates[1] - b.geometry.coordinates[1]);
+            const south = feats[0];
+            const mid = feats[1];
+            const north = feats[2];
 
-            const northwest = mid.geometry.coordinates[0] < north.geometry.coordinates[0] ? mid : south;
-            const northeast = mid.geometry.coordinates[0] > north.geometry.coordinates[0] ? mid : north;
+            const west = mid.geometry.coordinates[0] < north.geometry.coordinates[0] ? mid : north;
+            const east = mid.geometry.coordinates[0] > north.geometry.coordinates[0] ? mid : north;
 
-            addModel(south, "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/pond_pack.glb?raw=1", 4);
-            addModel(northwest, "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/bench.glb?raw=1", 4);
-            addModel(northeast, "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/closet.glb?raw=1", 4);
+            add3DModel(south, glbSouth, "model-south");
+            add3DModel(west, glbNW, "model-west");
+            add3DModel(east, glbNE, "model-east");
         });
 
-    function addModel(feature, url, scaleFactor) {
-        const lngLat = feature.geometry.coordinates;
-        const mc = mapboxgl.MercatorCoordinate.fromLngLat(lngLat, 0);
+    function add3DModel(feature, url, id) {
+        const pos = feature.geometry.coordinates;
+        const mc = mapboxgl.MercatorCoordinate.fromLngLat(pos, 0);
 
         const transform = {
-            translateX: mc.x,
-            translateY: mc.y,
-            translateZ: mc.z,
-            scale: mc.meterInMercatorCoordinateUnits() * scaleFactor
+            x: mc.x,
+            y: mc.y,
+            z: mc.z,
+            scale: mc.meterInMercatorCoordinateUnits() * 4
         };
 
         const camera = new THREE.Camera();
         const scene = new THREE.Scene();
-
-        const lightA = new THREE.DirectionalLight(0xffffff, 2);
-        lightA.position.set(0, 0, 200);
-        scene.add(lightA);
-
         const loader = new THREE.GLTFLoader();
+
+        let modelObject = null;
+
         loader.load(url, (gltf) => {
-            gltf.scene.scale.set(1, 1, 1);
-            scene.add(gltf.scene);
+            modelObject = gltf.scene;
+            modelObject.traverse(o => { if (o.isMesh) o.userData.pickable = true; });
+            scene.add(modelObject);
         });
 
-        const customLayer = {
-            id: "model-" + Math.random(),
+        const layer = {
+            id: id,
             type: "custom",
             renderingMode: "3d",
             onAdd: function (map, gl) {
                 this.renderer = new THREE.WebGLRenderer({
                     canvas: map.getCanvas(),
-                    context: gl,
-                    antialias: true
+                    context: gl
                 });
                 this.renderer.autoClear = false;
             },
             render: function (gl, matrix) {
-                const m = new THREE.Matrix4().fromArray(matrix);
-                const t = new THREE.Matrix4()
-                    .makeTranslation(transform.translateX, transform.translateY, transform.translateZ)
+                if (!modelObject) return;
+                const mat = new THREE.Matrix4().fromArray(matrix);
+                const mt = new THREE.Matrix4()
+                    .makeTranslation(transform.x, transform.y, transform.z)
                     .scale(new THREE.Vector3(transform.scale, -transform.scale, transform.scale));
-                camera.projectionMatrix = m.multiply(t);
+                camera.projectionMatrix = mat.multiply(mt);
                 this.renderer.resetState();
                 this.renderer.render(scene, camera);
                 map.triggerRepaint();
             }
         };
 
-        map.addLayer(customLayer);
+        map.addLayer(layer);
+
+        map.on("mousemove", (e) => {
+            if (!modelObject) return;
+
+            const mouse = new THREE.Vector2(
+                (e.point.x / map.getCanvas().width) * 2 - 1,
+                -(e.point.y / map.getCanvas().height) * 2 + 1
+            );
+
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(scene.children, true);
+
+            if (intersects.length > 0) {
+                modelObject.traverse(o => {
+                    if (o.isMesh) o.material.emissive = new THREE.Color(0xff8800);
+                });
+            } else {
+                modelObject.traverse(o => {
+                    if (o.isMesh && o.material.emissive) o.material.emissive = new THREE.Color(0);
+                });
+            }
+        });
     }
+
+    document.getElementById("toggleSites").addEventListener("change", (e) => {
+        map.setLayoutProperty("sites-points", "visibility", e.target.checked ? "visible" : "none");
+    });
+
+    document.getElementById("toggle3D").addEventListener("change", (e) => {
+        const v = e.target.checked ? "visible" : "none";
+        ["model-south","model-west","model-east"].forEach(id => {
+            if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", v);
+        });
+    });
+
+    document.getElementById("toggleSurface").addEventListener("change", () => {});
 });
 </script>
+
 </body>
 </html>
