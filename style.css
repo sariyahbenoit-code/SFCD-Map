@@ -1,13 +1,16 @@
-margin: 0;
-height: 100%;
-overflow: hidden;
+html, body {
+    margin: 0;
+    height: 100%;
+    overflow: hidden;
     background: transparent;
     font-family: Arial, sans-serif;
 }
 
 #map {
-@@ -11,19 +13,23 @@ html, body {
-width: 100%;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 100%;
 }
 
 #surfaceCanvas {
@@ -21,19 +24,12 @@ width: 100%;
 }
 
 .mapboxgl-popup {
-    z-index: 5;
-max-width: 300px;
+    z-index: 8;
+    max-width: 300px;
     font-family: Arial, sans-serif;
 }
 
 .mapboxgl-popup img {
-width: 100%;
-border-radius: 4px;
-}
-
-#three canvas {
-  position: absolute;
-  top: 0;
-  left: 0;
-  pointer-events: none; 
+    width: 100%;
+    border-radius: 4px;
 }
