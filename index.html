@@ -8,22 +8,25 @@
     <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
 
     <style>
-        body, html {
+        html, body {
             margin: 0;
             padding: 0;
-            height: 100%;
             width: 100%;
+            height: 100%;  
             overflow: hidden;
         }
 
         #map {
             position: absolute;
             top: 0;
-            bottom: 0;
+            left: 0;
             width: 100%;
+            height: 100%; 
         }
 
-        #floating-table, .floating-panel, table {
+        #floating-table, 
+        .floating-panel, 
+        table {
             display: none !important;
         }
     </style>
