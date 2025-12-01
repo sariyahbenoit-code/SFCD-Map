@@ -11,22 +11,19 @@
 <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
 <script src="https://unpkg.com/three@0.160.0/examples/js/loaders/GLTFLoader.js"></script>
 
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="styles.css">
 </head>
-
 <body>
-
-<div id="sidebar">
-    <h2>Site Information</h2>
-    <div id="sidebar-content">Click a site or 3D model to view details.</div>
-</div>
-
 <div id="map"></div>
-
-<div id="layerTogglePanel">
-    <label><input type="checkbox" id="toggleSites" checked> Sites</label>
-    <label><input type="checkbox" id="toggle3D" checked> 3D Models</label>
-    <label><input type="checkbox" id="toggleLabels" checked> Labels</label>
+<div id="sidebar">
+    <h2>Feature Info</h2>
+    <div id="featureInfo">Click on a model to see details.</div>
+    <h3>Toggle Layers</h3>
+    <div id="layerTogglePanel">
+        <label><input type="checkbox" id="toggleSites" checked> Modular Emergency Prep</label>
+        <label><input type="checkbox" id="toggle3D" checked> 3D Models</label>
+        <label><input type="checkbox" id="toggleLabels" checked> Labels</label>
+    </div>
 </div>
 
 <script src="script.js"></script>
