@@ -1,8 +1,6 @@
 mapboxgl.accessToken = 'YOUR_MAPBOX_TOKEN';
 
-// ---------------------------------------
-// BASE MAP (unchanged)
-// ---------------------------------------
+
 const map = new mapboxgl.Map({
     container: "map",
     style: "mapbox://styles/mapbox/light-v11",
@@ -12,7 +10,6 @@ const map = new mapboxgl.Map({
     bearing: -20
 });
 
-// Keep 3D buildings
 map.on("load", () => {
     map.addLayer({
         id: "3d-buildings",
@@ -34,9 +31,6 @@ map.on("load", () => {
 });
 
 
-// ---------------------------------------
-// LOAD GEOJSON POINTS WITH POPUPS
-// ---------------------------------------
 function loadGeoJSONPoints() {
     fetch("https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/data/619data.geojson")
         .then(r => r.json())
@@ -62,9 +56,6 @@ function loadGeoJSONPoints() {
 
 
 
-// ---------------------------------------
-// THREE.js 3D MODELS
-// ---------------------------------------
 let threeScene, threeCamera, threeRenderer;
 const loader = new THREE.GLTFLoader();
 
@@ -86,7 +77,6 @@ function initThreeLayer() {
 
             threeRenderer.autoClear = false;
 
-            // Load all 3 models
             loadModel("pond_pack.glb", [-122.51472840835794, 37.96556501819977]); // SOUTH
             loadModel("bench.glb", [-122.51172577538132, 37.96756766223187]);      // NW
             loadModel("closet.glb", [-122.51255653080607, 37.96784675899259]);     // NE
@@ -106,7 +96,7 @@ function initThreeLayer() {
 
 
 function loadModel(modelName, lngLat) {
-    const modelUrl = `https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/models/${modelName}`;
+    const modelUrl = `https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/${modelName}`;
 
     loader.load(modelUrl, gltf => {
         const model = gltf.scene;
