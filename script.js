@@ -1,110 +1,159 @@
-mapboxgl.accessToken = 'YOUR_MAPBOX_TOKEN';
-
+mapboxgl.accessToken =
+    "pk.eyJ1Ijoic25iZW5vaSIsImEiOiJjbWg5Y2IweTAwbnRzMm5xMXZrNnFnbmY5In0.Lza9yPTlMhbHE5zHNRb1aA";
 
 const map = new mapboxgl.Map({
     container: "map",
-    style: "mapbox://styles/mapbox/light-v11",
-    center: [-122.5135, 37.9670],
-    zoom: 15.3,
+    style: "mapbox://styles/mapbox/standard",
+    config: { basemap: { theme: "monochrome" } },
+    center: [-122.5125, 37.9677],
+    zoom: 17.5,
     pitch: 60,
-    bearing: -20
+    antialias: true
 });
 
-map.on("load", () => {
-    map.addLayer({
-        id: "3d-buildings",
-        source: "composite",
-        "source-layer": "building",
-        filter: ["==", "extrude", "true"],
-        type: "fill-extrusion",
-        minzoom: 14,
-        paint: {
-            "fill-extrusion-color": "#aaa",
-            "fill-extrusion-height": ["get", "height"],
-            "fill-extrusion-base": ["get", "min_height"],
-            "fill-extrusion-opacity": 0.6
-        }
-    });
+fetch("data/619data.geojson")
+    .then(r => r.json())
+    .then(geojson => {
+        map.on("load", () => {
+            map.addSource("srcd-points", {
+                type: "geojson",
+                data: geojson
+            });
 
-    loadGeoJSONPoints();
-    initThreeLayer();
-});
+            map.addLayer({
+                id: "srcd-points-layer",
+                type: "circle",
+                source: "srcd-points",
+                paint: {
+                    "circle-radius": 8,
+                    "circle-color": "#ff5500",
+                    "circle-stroke-width": 2,
+                    "circle-stroke-color": "#ffffff"
+                }
+            });
 
+            map.on("click", "srcd-points-layer", (e) => {
+                const props = e.features[0].properties;
 
-function loadGeoJSONPoints() {
-    fetch("https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/data/619data.geojson")
-        .then(r => r.json())
-        .then(data => {
-            data.features.forEach(feat => {
-                const el = document.createElement("div");
-                el.className = "marker";
+                const html = `
+                    <strong>${props.Landmark}</strong><br>
+                    ${props.Address || ""}<br><br>
+                    ${props.Proposal || ""}
+                `;
 
-                new mapboxgl.Marker(el)
-                    .setLngLat(feat.geometry.coordinates)
-                    .setPopup(
-                        new mapboxgl.Popup({ offset: 24 }).setHTML(`
-                            <strong>${feat.properties.Landmark}</strong><br>
-                            ${feat.properties.Address}<br><br>
-                            <em>${feat.properties.Proposal}</em><br>
-                            ${feat.properties["Proposal Link"] ? `<img src="${feat.properties["Proposal Link"]}" width="200">` : ""}
-                        `)
-                    )
+                new mapboxgl.Popup()
+                    .setLngLat(e.lngLat)
+                    .setHTML(html)
                     .addTo(map);
             });
+
+            add3DModels();
         });
-}
+    });
 
+function add3DModels() {
+    const THREE = window.THREE;
+    const loader = new THREE.GLTFLoader();
 
-
-let threeScene, threeCamera, threeRenderer;
-const loader = new THREE.GLTFLoader();
-
-function initThreeLayer() {
-    const threeLayer = {
-        id: "three-models",
-        type: "custom",
-        renderingMode: "3d",
-
-        onAdd: function (map, gl) {
-            threeScene = new THREE.Scene();
-            threeCamera = new THREE.Camera();
-
-            threeRenderer = new THREE.WebGLRenderer({
-                canvas: map.getCanvas(),
-                context: gl,
-                antialias: true
-            });
-
-            threeRenderer.autoClear = false;
-
-            loadModel("pond_pack.glb", [-122.51472840835794, 37.96556501819977]); // SOUTH
-            loadModel("bench.glb", [-122.51172577538132, 37.96756766223187]);      // NW
-            loadModel("closet.glb", [-122.51255653080607, 37.96784675899259]);     // NE
+    const models = [
+        {
+            id: "solar-forebay-south",
+            file: "assets/images/pond_pack.glb",
+            coords: [-122.51472840835794, 37.96556501819977] // SOUTH
         },
-
-        render: function (gl, matrix) {
-            const m = new THREE.Matrix4().fromArray(matrix);
-            threeCamera.projectionMatrix = m;
-            threeRenderer.resetState();
-            threeRenderer.render(threeScene, threeCamera);
-            map.triggerRepaint();
+        {
+            id: "bench-nw",
+            file: "assets/images/bench.glb",
+            coords: [-122.51255653080607, 37.96784675899259] // NW
+        },
+        {
+            id: "closet-ne",
+            file: "assets/images/closet.glb",
+            coords: [-122.51172577538132, 37.96756766223187] // NE
         }
-    };
+    ];
 
-    map.addLayer(threeLayer);
-}
+    models.forEach(model => {
+        const mc = mapboxgl.MercatorCoordinate.fromLngLat(model.coords, 0);
 
+        const transform = {
+            translateX: mc.x,
+            translateY: mc.y,
+            translateZ: mc.z,
+            rotateX: Math.PI / 2,
+            rotateY: 0,
+            rotateZ: 0,
+            scale: mc.meterInMercatorCoordinateUnits()
+        };
 
-function loadModel(modelName, lngLat) {
-    const modelUrl = `https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/${modelName}`;
+        const customLayer = {
+            id: model.id,
+            type: "custom",
+            renderingMode: "3d",
 
-    loader.load(modelUrl, gltf => {
-        const model = gltf.scene;
+            onAdd: (map, gl) => {
+                this.camera = new THREE.Camera();
+                this.scene = new THREE.Scene();
 
-        const merc = mapboxgl.MercatorCoordinate.fromLngLat(lngLat, 0);
-        model.position.set(merc.x, merc.y, merc.z);
-        model.scale.set(10, 10, 10);
+                const light1 = new THREE.DirectionalLight(0xffffff, 1);
+                light1.position.set(0, -70, 100).normalize();
+                this.scene.add(light1);
 
-        threeScene.add(model);
+                const light2 = new THREE.DirectionalLight(0xffffff, 1);
+                light2.position.set(0, 70, 100).normalize();
+                this.scene.add(light2);
+
+                loader.load(model.file, (gltf) => {
+                    gltf.scene.scale.set(1, 1, 1); // adjust if needed
+                    this.scene.add(gltf.scene);
+                });
+
+                this.renderer = new THREE.WebGLRenderer({
+                    canvas: map.getCanvas(),
+                    context: gl,
+                    antialias: true
+                });
+
+                this.renderer.autoClear = false;
+            },
+
+            render: (gl, matrix) => {
+                const rotationX = new THREE.Matrix4().makeRotationAxis(
+                    new THREE.Vector3(1, 0, 0),
+                    transform.rotateX
+                );
+
+                const rotationY = new THREE.Matrix4().makeRotationAxis(
+                    new THREE.Vector3(0, 1, 0),
+                    transform.rotateY
+                );
+
+                const rotationZ = new THREE.Matrix4().makeRotationAxis(
+                    new THREE.Vector3(0, 0, 1),
+                    transform.rotateZ
+                );
+
+                const m = new THREE.Matrix4().fromArray(matrix);
+                const l = new THREE.Matrix4()
+                    .makeTranslation(transform.translateX, transform.translateY, transform.translateZ)
+                    .scale(
+                        new THREE.Vector3(
+                            transform.scale,
+                            -transform.scale,
+                            transform.scale
+                        )
+                    )
+                    .multiply(rotationX)
+                    .multiply(rotationY)
+                    .multiply(rotationZ);
+
+                this.camera.projectionMatrix = m.multiply(l);
+                this.renderer.resetState();
+                this.renderer.render(this.scene, this.camera);
+                map.triggerRepaint();
+            }
+        };
+
+        map.addLayer(customLayer);
     });
 }
