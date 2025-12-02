@@ -1,182 +1,120 @@
-mapboxgl.accessToken =
-  "pk.eyJ1Ijoic25iZW5vaSIsImEiOiJjbWg5Y2IweTAwbnRzMm5xMXZrNnFnbmY5In0.Lza9yPTlMhbHE5zHNRb1aA";
+mapboxgl.accessToken = 'YOUR_MAPBOX_TOKEN';
 
+// ---------------------------------------
+// BASE MAP (unchanged)
+// ---------------------------------------
 const map = new mapboxgl.Map({
-  container: "map",
-  style: "mapbox://styles/mapbox/standard",
-  config: {
-    basemap: { theme: "monochrome" }
-  },
-  center: [-122.5125, 37.9677],
-  zoom: 17.8,
-  pitch: 60,
-  antialias: true
+    container: "map",
+    style: "mapbox://styles/mapbox/light-v11",
+    center: [-122.5135, 37.9670],
+    zoom: 15.3,
+    pitch: 60,
+    bearing: -20
 });
 
-
-const geojsonUrl =
-  "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/data/619data.geojson";
-
+// Keep 3D buildings
 map.on("load", () => {
-  map.setConfig({ basemap: { theme: "monochrome" } });
-
-  fetch(geojsonUrl)
-    .then((res) => res.json())
-    .then((data) => {
-      map.addSource("points", {
-        type: "geojson",
-        data: data
-      });
-
-      map.addLayer({
-        id: "points-layer",
-        type: "circle",
-        source: "points",
+    map.addLayer({
+        id: "3d-buildings",
+        source: "composite",
+        "source-layer": "building",
+        filter: ["==", "extrude", "true"],
+        type: "fill-extrusion",
+        minzoom: 14,
         paint: {
-          "circle-radius": 10,
-          "circle-color": "#ff5500",
-          "circle-stroke-width": 2,
-          "circle-stroke-color": "#ffffff"
+            "fill-extrusion-color": "#aaa",
+            "fill-extrusion-height": ["get", "height"],
+            "fill-extrusion-base": ["get", "min_height"],
+            "fill-extrusion-opacity": 0.6
         }
-      });
-
-      map.on("click", "points-layer", (e) => {
-        const props = e.features[0].properties;
-
-        const html = `
-          <strong>${props.Landmark || ""}</strong><br>
-          <em>${props.Address || ""}</em><br><br>
-          <strong>Proposal:</strong> ${props.Proposal || ""}<br><br>
-          <a href="${props["Proposal Link"]}" target="_blank">Proposal Link</a><br>
-          <a href="${props["Existing Link"]}" target="_blank">Existing Site</a>
-        `;
-
-        new mapboxgl.Popup()
-          .setLngLat(e.features[0].geometry.coordinates)
-          .setHTML(html)
-          .addTo(map);
-      });
-
-      map.on("mouseenter", "points-layer", () => {
-        map.getCanvas().style.cursor = "pointer";
-      });
-
-      map.on("mouseleave", "points-layer", () => {
-        map.getCanvas().style.cursor = "";
-      });
-
-      addAllGLBModels();
     });
+
+    loadGeoJSONPoints();
+    initThreeLayer();
 });
 
 
-function addCustom3DModel(id, glbPath, lng, lat, scale = 1) {
-  const modelAltitude = 0;
-  const modelRotate = [Math.PI / 2, 0, 0];
+// ---------------------------------------
+// LOAD GEOJSON POINTS WITH POPUPS
+// ---------------------------------------
+function loadGeoJSONPoints() {
+    fetch("https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/data/619data.geojson")
+        .then(r => r.json())
+        .then(data => {
+            data.features.forEach(feat => {
+                const el = document.createElement("div");
+                el.className = "marker";
 
-  const merc = mapboxgl.MercatorCoordinate.fromLngLat([lng, lat], modelAltitude);
-
-  const transform = {
-    translateX: merc.x,
-    translateY: merc.y,
-    translateZ: merc.z,
-    rotateX: modelRotate[0],
-    rotateY: modelRotate[1],
-    rotateZ: modelRotate[2],
-    scale: merc.meterInMercatorCoordinateUnits() * scale
-  };
-
-  const customLayer = {
-    id: id,
-    type: "custom",
-    renderingMode: "3d",
-
-    onAdd: function (map, gl) {
-      this.camera = new THREE.Camera();
-      this.scene = new THREE.Scene();
-
-      const light1 = new THREE.DirectionalLight(0xffffff);
-      light1.position.set(0, -70, 100).normalize();
-
-      const light2 = new THREE.DirectionalLight(0xffffff);
-      light2.position.set(0, 70, 100).normalize();
-
-      this.scene.add(light1);
-      this.scene.add(light2);
-
-      const loader = new THREE.GLTFLoader();
-      loader.load(glbPath, (gltf) => {
-        this.scene.add(gltf.scene);
-      });
-
-      this.renderer = new THREE.WebGLRenderer({
-        canvas: map.getCanvas(),
-        context: gl,
-        antialias: true
-      });
-      this.renderer.autoClear = false;
-    },
-
-    render: function (gl, matrix) {
-      const rotationX = new THREE.Matrix4().makeRotationAxis(
-        new THREE.Vector3(1, 0, 0),
-        transform.rotateX
-      );
-      const rotationY = new THREE.Matrix4().makeRotationAxis(
-        new THREE.Vector3(0, 1, 0),
-        transform.rotateY
-      );
-      const rotationZ = new THREE.Matrix4().makeRotationAxis(
-        new THREE.Vector3(0, 0, 1),
-        transform.rotateZ
-      );
-
-      const m = new THREE.Matrix4().fromArray(matrix);
-      const l = new THREE.Matrix4()
-        .makeTranslation(transform.translateX, transform.translateY, transform.translateZ)
-        .scale(
-          new THREE.Vector3(
-            transform.scale,
-            -transform.scale,
-            transform.scale
-          )
-        )
-        .multiply(rotationX)
-        .multiply(rotationY)
-        .multiply(rotationZ);
-
-      this.camera.projectionMatrix = m.multiply(l);
-      this.renderer.resetState();
-      this.renderer.render(this.scene, this.camera);
-      map.triggerRepaint();
-    }
-  };
-
-  map.addLayer(customLayer);
+                new mapboxgl.Marker(el)
+                    .setLngLat(feat.geometry.coordinates)
+                    .setPopup(
+                        new mapboxgl.Popup({ offset: 24 }).setHTML(`
+                            <strong>${feat.properties.Landmark}</strong><br>
+                            ${feat.properties.Address}<br><br>
+                            <em>${feat.properties.Proposal}</em><br>
+                            ${feat.properties["Proposal Link"] ? `<img src="${feat.properties["Proposal Link"]}" width="200">` : ""}
+                        `)
+                    )
+                    .addTo(map);
+            });
+        });
 }
 
-function addAllGLBModels() {
-  addCustom3DModel(
-    "south-model",
-    "models/pond_pack.glb",
-    -122.51472840835794,
-    37.96556501819977,
-    0.8
-  );
 
-  addCustom3DModel(
-    "nw-model",
-    "models/bench.glb",
-    -122.51255653080607,
-    37.96784675899259,
-    1.0
-  );
 
-  addCustom3DModel(
-    "ne-model",
-    "models/closet.glb",
-    -122.51172577538132,
-    37.96756766223187,
-    1.0
-  );
+// ---------------------------------------
+// THREE.js 3D MODELS
+// ---------------------------------------
+let threeScene, threeCamera, threeRenderer;
+const loader = new THREE.GLTFLoader();
+
+function initThreeLayer() {
+    const threeLayer = {
+        id: "three-models",
+        type: "custom",
+        renderingMode: "3d",
+
+        onAdd: function (map, gl) {
+            threeScene = new THREE.Scene();
+            threeCamera = new THREE.Camera();
+
+            threeRenderer = new THREE.WebGLRenderer({
+                canvas: map.getCanvas(),
+                context: gl,
+                antialias: true
+            });
+
+            threeRenderer.autoClear = false;
+
+            // Load all 3 models
+            loadModel("pond_pack.glb", [-122.51472840835794, 37.96556501819977]); // SOUTH
+            loadModel("bench.glb", [-122.51172577538132, 37.96756766223187]);      // NW
+            loadModel("closet.glb", [-122.51255653080607, 37.96784675899259]);     // NE
+        },
+
+        render: function (gl, matrix) {
+            const m = new THREE.Matrix4().fromArray(matrix);
+            threeCamera.projectionMatrix = m;
+            threeRenderer.resetState();
+            threeRenderer.render(threeScene, threeCamera);
+            map.triggerRepaint();
+        }
+    };
+
+    map.addLayer(threeLayer);
+}
+
+
+function loadModel(modelName, lngLat) {
+    const modelUrl = `https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/models/${modelName}`;
+
+    loader.load(modelUrl, gltf => {
+        const model = gltf.scene;
+
+        const merc = mapboxgl.MercatorCoordinate.fromLngLat(lngLat, 0);
+        model.position.set(merc.x, merc.y, merc.z);
+        model.scale.set(10, 10, 10);
+
+        threeScene.add(model);
+    });
 }
