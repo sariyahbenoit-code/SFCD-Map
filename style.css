@@ -4,34 +4,35 @@ html, body {
     height: 100%;
     width: 100%;
     overflow: hidden;
-    font-family: 'Roboto Mono', monospace;
 }
 
 
+#map {
+    position: fixed;
+    inset: 0;   
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
 #title-container {
-    position: absolute;
+    position: fixed;
     top: 30px;
     left: 30px;
-    z-index: 9999;
+    z-index: 99999;   
+    font-family: "Roboto Mono", monospace;
     color: black;
-    pointer-events: none; 
+    pointer-events: none;  
 }
 
 #title-container h1 {
-    font-size: 72px;
     margin: 0;
+    font-size: 72px;
     font-weight: 700;
 }
 
 #title-container h2 {
+    margin: 5px 0 0;
     font-size: 36px;
-    margin: 5px 0 0 0;
     font-weight: 400;
-}
-
-#map {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 100%;
 }
