@@ -3,13 +3,11 @@ html, body {
     padding: 0;
     height: 100%;
     width: 100%;
-    overflow: hidden;
 }
-
 
 #map {
     position: fixed;
-    inset: 0;   
+    inset: 0;
     width: 100%;
     height: 100%;
     z-index: 1;
@@ -19,10 +17,10 @@ html, body {
     position: fixed;
     top: 30px;
     left: 30px;
-    z-index: 99999;   
+    z-index: 9999; 
     font-family: "Roboto Mono", monospace;
     color: black;
-    pointer-events: none;  
+    pointer-events: none; 
 }
 
 #title-container h1 {
@@ -32,15 +30,39 @@ html, body {
 }
 
 #title-container h2 {
-    margin: 5px 0 0;
+    margin: 5px 0;
     font-size: 36px;
     font-weight: 400;
-}
-
 }
 
 #title-container h3 {
     margin: 5px 0 0;
     font-size: 18px;
     font-weight: 400;
+}
+
+#ui-container {
+    position: fixed;
+    top: 170px;        
+    left: 30px;
+    padding: 15px;
+    width: 260px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 10px;
+    z-index: 99999;    
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+#floating-table h4 {
+    margin: 12px 0 5px;
+}
+
+#info-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#info-table td {
+    padding: 6px 4px;
+    border-bottom: 1px solid #ddd;
 }
