@@ -17,10 +17,10 @@ html, body {
     position: fixed;
     top: 30px;
     left: 30px;
-    z-index: 9999; 
+    z-index: 9999;
     font-family: "Roboto Mono", monospace;
     color: black;
-    pointer-events: none; 
+    pointer-events: none;
 }
 
 #title-container h1 {
@@ -43,26 +43,36 @@ html, body {
 
 #ui-container {
     position: fixed;
-    top: 170px;        
+    top: 225px; 
     left: 30px;
     padding: 15px;
     width: 260px;
+
     background: rgba(255, 255, 255, 0.95);
+
     border-radius: 10px;
-    z-index: 99999;    
+    z-index: 99999;
     box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
 
-#floating-table h4 {
-    margin: 12px 0 5px;
+#ui-container h4 {
+    margin: 0 0 10px;
+    font-size: 20px;
+    font-weight: 600;
 }
 
-#info-table {
+#ui-container button {
+    display: block;
     width: 100%;
-    border-collapse: collapse;
+    margin: 6px 0;
+    padding: 8px;
+    border-radius: 6px;
+    border: none;
+    background: #333;
+    color: white;
+    cursor: pointer;
 }
 
-#info-table td {
-    padding: 6px 4px;
-    border-bottom: 1px solid #ddd;
+#ui-container button:hover {
+    background: #555;
 }
