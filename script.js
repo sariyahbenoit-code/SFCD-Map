@@ -1,17 +1,20 @@
 mapboxgl.accessToken =
     "pk.eyJ1Ijoic25iZW5vaSIsImEiOiJjbWg5Y2IweTAwbnRzMm5xMXZrNnFnbmY5In0.Lza9yPTlMhbHE5zHNRb1aA";
 
+const START_CENTER = [-122.513922, 37.966597];
+const START_ZOOM = 17.5;
+
 const map = new mapboxgl.Map({
     container: "map",
     style: "mapbox://styles/mapbox/standard",
     config: { basemap: { theme: "monochrome" } },
-
-    center: [-122.513922, 37.966597],
-
-    zoom: 17.5,
+    center: START_CENTER,
+    zoom: START_ZOOM,
     pitch: 60,
     antialias: true
 });
+
+let modelLayers = [];  
 
 fetch("data/619data.geojson")
     .then(r => r.json())
@@ -53,29 +56,32 @@ fetch("data/619data.geojson")
         });
     });
 
+
 function add3DModels() {
     const THREE = window.THREE;
     const loader = new THREE.GLTFLoader();
 
     const models = [
         {
-            id: "solar-forebay-south",
+            id: "model-south",
             file: "assets/images/pond_pack.glb",
-            coords: [-122.51472840835794, 37.96556501819977] // SOUTH
+            coords: [-122.51472840835794, 37.96556501819977]
         },
         {
-            id: "bench-nw",
+            id: "model-nw",
             file: "assets/images/bench.glb",
-            coords: [-122.51255653080607, 37.96784675899259] // NW
+            coords: [-122.51255653080607, 37.96784675899259]
         },
         {
-            id: "closet-ne",
+            id: "model-ne",
             file: "assets/images/closet.glb",
-            coords: [-122.51172577538132, 37.96756766223187] // NE
+            coords: [-122.51172577538132, 37.96756766223187]
         }
     ];
 
     models.forEach(model => {
+        modelLayers.push(model.id);
+
         const mc = mapboxgl.MercatorCoordinate.fromLngLat(model.coords, 0);
 
         const transform = {
@@ -83,8 +89,6 @@ function add3DModels() {
             translateY: mc.y,
             translateZ: mc.z,
             rotateX: Math.PI / 2,
-            rotateY: 0,
-            rotateZ: 0,
             scale: mc.meterInMercatorCoordinateUnits()
         };
 
@@ -98,15 +102,11 @@ function add3DModels() {
                 this.scene = new THREE.Scene();
 
                 const light1 = new THREE.DirectionalLight(0xffffff, 1);
-                light1.position.set(0, -70, 100).normalize();
+                light1.position.set(0, -70, 100);
                 this.scene.add(light1);
 
-                const light2 = new THREE.DirectionalLight(0xffffff, 1);
-                light2.position.set(0, 70, 100).normalize();
-                this.scene.add(light2);
-
                 loader.load(model.file, (gltf) => {
-                    gltf.scene.scale.set(1, 1, 1); // adjust if needed
+                    gltf.scene.scale.set(1, 1, 1);
                     this.scene.add(gltf.scene);
                 });
 
@@ -115,39 +115,19 @@ function add3DModels() {
                     context: gl,
                     antialias: true
                 });
-
                 this.renderer.autoClear = false;
             },
 
             render: (gl, matrix) => {
-                const rotationX = new THREE.Matrix4().makeRotationAxis(
-                    new THREE.Vector3(1, 0, 0),
-                    transform.rotateX
-                );
-
-                const rotationY = new THREE.Matrix4().makeRotationAxis(
-                    new THREE.Vector3(0, 1, 0),
-                    transform.rotateY
-                );
-
-                const rotationZ = new THREE.Matrix4().makeRotationAxis(
-                    new THREE.Vector3(0, 0, 1),
-                    transform.rotateZ
-                );
-
                 const m = new THREE.Matrix4().fromArray(matrix);
                 const l = new THREE.Matrix4()
                     .makeTranslation(transform.translateX, transform.translateY, transform.translateZ)
                     .scale(
-                        new THREE.Vector3(
-                            transform.scale,
-                            -transform.scale,
-                            transform.scale
-                        )
+                        new THREE.Vector3(transform.scale, -transform.scale, transform.scale)
                     )
-                    .multiply(rotationX)
-                    .multiply(rotationY)
-                    .multiply(rotationZ);
+                    .multiply(
+                        new THREE.Matrix4().makeRotationX(transform.rotateX)
+                    );
 
                 this.camera.projectionMatrix = m.multiply(l);
                 this.renderer.resetState();
@@ -159,3 +139,27 @@ function add3DModels() {
         map.addLayer(customLayer);
     });
 }
+
+
+document.getElementById("toggle-models").onclick = () => {
+    modelLayers.forEach(id => {
+        const visibility = map.getLayoutProperty(id, "visibility");
+        map.setLayoutProperty(id, "visibility", visibility === "none" ? "visible" : "none");
+    });
+};
+
+document.getElementById("zoom-out").onclick = () => {
+    map.flyTo({
+        center: START_CENTER,
+        zoom: START_ZOOM / 5,
+        pitch: 0
+    });
+};
+
+document.getElementById("zoom-in").onclick = () => {
+    map.flyTo({
+        center: START_CENTER,
+        zoom: START_ZOOM,
+        pitch: 60
+    });
+};
