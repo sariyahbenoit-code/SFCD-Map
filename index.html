@@ -1,50 +1,79 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="utf-8" />
-    <title>SRCD Map</title>
-    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Biotility Shoreline Resilience</title>
 
-    <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
-    <link rel="stylesheet" href="style.css" />
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
+
+    #title-block {
+      position: relative;
+      z-index: 5;
+      background: white;
+      padding: 10px 20px;
+      width: 100%;
+    }
+
+    #title-block h1,
+    #title-block h3 {
+      margin: 0;
+      padding: 0;
+    }
+
+    #map {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 100%;
+      z-index: 1;
+    }
+
+    #control-panel {
+      position: absolute;
+      top: 140px; 
+      left: 20px;
+      z-index: 10;
+      background: rgba(255, 255, 255, 0.85);
+      padding: 12px;
+      border-radius: 6px;
+      width: 260px;
+      backdrop-filter: blur(4px);
+    }
+
+    #control-panel table {
+      width: 100%;
+      font-size: 14px;
+    }
+
+    #control-panel h4 {
+      margin-top: 0;
+      margin-bottom: 8px;
+      font-size: 16px;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 8px;
+      margin-top: 6px;
+      cursor: pointer;
+      border: 1px solid #444;
+      background: #eee;
+      border-radius: 4px;
+    }
+  </style>
 </head>
 
 <body>
 
-    <div id="title-container">
-        <h1>Habitual Preparedness.</h1>
-        <h2>revealing the urban ecology that protects us</h2>
-        <h3>map by Sariyah Benoit for Geog 183C</h3>
-    </div>
-    
-<div id="control-panel">
-    <h4>Zoom options</h4>
-
-    <label>
-        <input type="checkbox" id="toggle-3d" checked>
-        Show 3D Models
-    </label>
-
-    <button id="zoom-region">zoom to SRCD region</button>
-    <button id="reset-view">reset view</button>
-</div>
-
-    <div id="ui-container">
-        <h4>Zoom options</h4>
-
-        <button id="zoomOutBtn">zoom to SRCD region</button>
-        <button id="resetBtn">reset view</button>
-
-        <button id="toggleModelsBtn">Toggle 3D Models</button>
-        <button id="toggleLabelsBtn">Toggle Labels</button>
-    </div>
-
-    <div id="map"></div>
-
-    <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
-    <script src="https://unpkg.com/three@0.126.0/build/three.min.js"></script>
-    <script src="https://unpkg.com/three@0.126.0/examples/js/loaders/GLTFLoader.js"></script>
-    <script src="script.js"></script>
-
-</body>
-</html>
+  <div id="title-block">
+    <h1>San Rafael Canal District Resilience Demonstration</h1>
+    <h3>Conceptual Design Model and Adaptati
