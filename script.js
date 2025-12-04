@@ -148,7 +148,7 @@ if (zoomRegionBtn) {
     zoomRegionBtn.addEventListener('click', () => {
         map.flyTo({
             center: SRCD_CENTER,
-            zoom: Math.max(1, (map.getZoom() - 5)), 
+            zoom: Math.max(1, (map.getZoom() - 2)), 
             pitch: 60,
             bearing: -20,
             speed: 0.8
