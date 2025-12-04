@@ -1,60 +1,68 @@
-body {
-  margin: 0;
-  overflow: hidden;
-  font-family: Arial, sans-serif;
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
 }
 
-#title-block {
-  position: relative;
-  z-index: 5;
-  background: white;
-  padding: 10px 20px;
-  width: 100%;
-}
-
-#title-block h1,
-#title-block h3 {
-  margin: 0;
-  padding: 0;
-}
 
 #map {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 100%;
-  z-index: 1;
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+
+#title-container {
+    position: fixed;
+    top: 30px;
+    left: 30px;
+    z-index: 99;
+    font-family: "Roboto Mono", monospace;
+    color: black;
+    pointer-events: none;
+}
+
+#title-container h1 {
+    margin: 0;
+    font-size: 72px;
+    font-weight: 700;
+}
+
+#title-container h2 {
+    margin: 5px 0 0;
+    font-size: 36px;
+    font-weight: 400;
+}
+
+#title-container h3 {
+    margin: 5px 0 0;
+    font-size: 18px;
+    font-weight: 400;
 }
 
 #control-panel {
-  position: absolute;
-  top: 140px; 
-  left: 20px;
-  z-index: 10;
-  background: rgba(255, 255, 255, 0.85);
-  padding: 12px;
-  border-radius: 6px;
-  width: 260px;
-  backdrop-filter: blur(4px);
-}
-
-#control-panel table {
-  width: 100%;
-  font-size: 14px;
-}
-
-#control-panel h4 {
-  margin-top: 0;
-  margin-bottom: 8px;
-  font-size: 16px;
+    position: fixed;
+    top: 200px; 
+    left: 30px;
+    z-index: 999;
+    background: rgba(255,255,255,0.85);
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-family: "Roboto Mono", monospace;
+    width: 260px;
+    backdrop-filter: blur(3px);
 }
 
 .btn {
-  width: 100%;
-  padding: 8px;
-  margin-top: 6px;
-  cursor: pointer;
-  border: 1px solid #444;
-  background: #eee;
-  border-radius: 4px;
+    width: 100%;
+    padding: 8px;
+    margin-top: 6px;
+    cursor: pointer;
+    border: 1px solid #333;
+    background: #eee;
+    border-radius: 4px;
 }
