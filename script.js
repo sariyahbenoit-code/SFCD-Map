@@ -1,9 +1,7 @@
 mapboxgl.accessToken =
     "pk.eyJ1Ijoic25iZW5vaSIsImEiOiJjbWg5Y2IweTAwbnRzMm5xMXZrNnFnbmY5In0.Lza9yPTlMhbHE5zHNRb1aA";
 
-// ----------------------
-// MAP INITIALIZATION
-// ----------------------
+
 const map = new mapboxgl.Map({
     container: "map",
     style: "mapbox://styles/mapbox/standard",
