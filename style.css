@@ -6,7 +6,6 @@ html, body {
     overflow: hidden;
 }
 
-
 #map {
     position: fixed;
     inset: 0;
@@ -14,7 +13,6 @@ html, body {
     height: 100%;
     z-index: 1;
 }
-
 
 #title-container {
     position: fixed;
@@ -46,7 +44,7 @@ html, body {
 
 #control-panel {
     position: fixed;
-    top: 400px;    
+    top: 400px;
     left: 30px;
     z-index: 999;
     background: rgba(255,255,255,0.85);
@@ -55,8 +53,6 @@ html, body {
     font-family: "Roboto Mono", monospace;
     width: 260px;
     backdrop-filter: blur(3px);
-}
-
 }
 
 .btn {
