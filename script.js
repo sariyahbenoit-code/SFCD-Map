@@ -1,170 +1,170 @@
-mapboxgl.accessToken =
-    "pk.eyJ1Ijoic25iZW5vaSIsImEiOiJjbWg5Y2IweTAwbnRzMm5xMXZrNnFnbmY5In0.Lza9yPTlMhbHE5zHNRb1aA";
+// =======================================================
+//  SRCD MAP — VERSION 12_4
+// =======================================================
 
+mapboxgl.accessToken =
+  "pk.eyJ1Ijoic2FyaXlhaGJlbm9pdG8iLCJhIjoiY20yY3h3dGluMDduZTNlbnd3NmJoMHR3YSJ9.hlCKAxXXfWRBdoYVpl_bjQ";
+
+const INITIAL_VIEW = {
+  center: [-122.51444, 37.96703], 
+  zoom: 15.5,                    
+  pitch: 60,
+  bearing: -17.6
+};
 
 const map = new mapboxgl.Map({
-    container: "map",
-    style: "mapbox://styles/mapbox/standard",
-    config: { basemap: { theme: "monochrome" } },
-
-    center: [-122.51444, 37.96703 ],
-], 
-    zoom: 17.5,
-    pitch: 60,
-    antialias: true
+  container: "map",
+  style: "mapbox://styles/mapbox/light-v11",
+  ...INITIAL_VIEW,
+  antialias: true
 });
 
-fetch("data/619data.geojson")
-    .then(r => r.json())
-    .then(geojson => {
-        map.on("load", () => {
-            map.addSource("srcd-points", {
-                type: "geojson",
-                data: geojson
-            });
+
+map.addControl(new mapboxgl.NavigationControl());
+
+map.on("load", () => {
+
+  map.addSource("srcd-points", {
+    type: "geojson",
+    data: "assets/data/srcd_points.geojson"
+  });
 
 
-            map.addLayer({
-                id: "srcd-points-layer",
-                type: "circle",
-                source: "srcd-points",
-                layout: { visibility: "visible" },
-                paint: {
-                    "circle-radius": 8,
-                    "circle-color": "#ff5500",
-                    "circle-stroke-width": 2,
-                    "circle-stroke-color": "#ffffff"
-                }
-            }, "road-label"); 
+  map.addLayer({
+    id: "srcd-point-layer",
+    type: "circle",
+    source: "srcd-points",
+    paint: {
+      "circle-radius": 8,
+      "circle-color": "#ff5500",
+      "circle-stroke-color": "#ffffff",
+      "circle-stroke-width": 2
+    }
+  });
 
 
-            map.on("click", "srcd-points-layer", (e) => {
-                const props = e.features[0].properties;
+  map.on("click", "srcd-point-layer", (e) => {
+    const props = e.features[0].properties;
+    new mapboxgl.Popup()
+      .setLngLat(e.lngLat)
+      .setHTML(`
+          <strong>${props.name || "Unnamed Point"}</strong><br>
+          ${props.description || ""}
+      `)
+      .addTo(map);
+  });
 
-                const html = `
-                    <strong>${props.Landmark}</strong><br>
-                    ${props.Address || ""}<br><br>
-                    ${props.Proposal || ""}
-                `;
+  map.on("mouseenter", "srcd-point-layer", () => {
+    map.getCanvas().style.cursor = "pointer";
+  });
 
-                new mapboxgl.Popup()
-                    .setLngLat(e.lngLat)
-                    .setHTML(html)
-                    .addTo(map);
-            });
+  map.on("mouseleave", "srcd-point-layer", () => {
+    map.getCanvas().style.cursor = "";
+  });
 
+ 
+  loadGLBModel(
+    "assets/images/pond_pack.glb",
+    [-122.51444, 37.96703], 
+    "pond-model"
+  );
 
-            add3DModels();
-        });
+  loadGLBModel(
+    "assets/images/bench.glb",
+    [-122.51444, 37.96703],
+    "bench-model"
+  );
+
+  loadGLBModel(
+    "assets/images/closet.glb",
+    [-122.51444, 37.96703], 
+    "closet-model"
+  );
+});
+
+function loadGLBModel(modelURL, lngLat, modelId) {
+  const modelOrigin = lngLat;
+  const modelAltitude = 0;
+  const modelRotate = [Math.PI / 2, 0, 0];
+
+  const mercator = mapboxgl.MercatorCoordinate.fromLngLat(
+    { lng: modelOrigin[0], lat: modelOrigin[1] },
+    modelAltitude
+  );
+
+  const modelTransform = {
+    translateX: mercator.x,
+    translateY: mercator.y,
+    translateZ: mercator.z,
+    rotateX: modelRotate[0],
+    rotateY: modelRotate[1],
+    rotateZ: modelRotate[2],
+    scale: mercator.meterInMercatorCoordinateUnits()
+  };
+
+  const THREE = window.THREE;
+  const renderer = new THREE.WebGLRenderer({
+    canvas: map.getCanvas(),
+    context: map.painter.context.gl,
+    antialias: true
+  });
+  renderer.autoClear = false;
+
+  const scene = new THREE.Scene();
+
+  const camera = new THREE.Camera();
+  const loader = new THREE.GLTFLoader();
+  loader.load(modelURL, (gltf) => {
+    const model = gltf.scene;
+    scene.add(model);
+
+    model.traverse((child) => {
+      if (child.isMesh) {
+        child.castShadow = true;
+      }
     });
 
-function add3DModels() {
-    const THREE = window.THREE;
-    const loader = new THREE.GLTFLoader();
+    function render() {
+      const rotationX = new THREE.Matrix4().makeRotationAxis(
+        new THREE.Vector3(1, 0, 0),
+        modelTransform.rotateX
+      );
+      const rotationY = new THREE.Matrix4().makeRotationAxis(
+        new THREE.Vector3(0, 1, 0),
+        modelTransform.rotateY
+      );
+      const rotationZ = new THREE.Matrix4().makeRotationAxis(
+        new THREE.Vector3(0, 0, 1),
+        modelTransform.rotateZ
+      );
 
-    const models = [
-        {
-            id: "solar-forebay-south",
-            file: "assets/images/pond_pack.glb",
-            coords: [-122.51472840835794, 37.96556501819977]
-        },
-        {
-            id: "bench-nw",
-            file: "assets/images/bench.glb",
-            coords: [-122.51255653080607, 37.96784675899259]
-        },
-        {
-            id: "closet-ne",
-            file: "assets/images/closet.glb",
-            coords: [-122.51172577538132, 37.96756766223187]
-        }
-    ];
+      const m = new THREE.Matrix4()
+        .makeTranslation(
+          modelTransform.translateX,
+          modelTransform.translateY,
+          modelTransform.translateZ
+        )
+        .multiply(rotationX)
+        .multiply(rotationY)
+        .multiply(rotationZ)
+        .scale(
+          new THREE.Vector3(
+            modelTransform.scale,
+            -modelTransform.scale,
+            modelTransform.scale
+          )
+        );
 
-    models.forEach(model => {
-        const mc = mapboxgl.MercatorCoordinate.fromLngLat(model.coords, 0);
+      camera.projectionMatrix = map.getFreeCameraOptions().projectionMatrix;
 
-        const customLayer = {
-            id: model.id,
-            type: "custom",
-            renderingMode: "3d",
+      renderer.resetState();
+      renderer.render(scene, camera);
 
-            onAdd: (map, gl) => {
-                this.camera = new THREE.Camera();
-                this.scene = new THREE.Scene();
+      map.triggerRepaint();
+    }
 
-       
-                const light = new THREE.DirectionalLight(0xffffff, 1.2);
-                light.position.set(100, 100, 200);
-                this.scene.add(light);
-
-   
-                loader.load(model.file, (gltf) => {
-                    gltf.scene.position.set(0, 0, 0);
-                    gltf.scene.scale.set(1, 1, 1);
-                    this.scene.add(gltf.scene);
-                });
-
-    
-                this.renderer = new THREE.WebGLRenderer({
-                    canvas: map.getCanvas(),
-                    context: gl,
-                    antialias: true
-                });
-
-                this.renderer.autoClear = false;
-            },
-
-            render: (gl, matrix) => {
-                const rotationX = new THREE.Matrix4().makeRotationAxis(
-                    new THREE.Vector3(1, 0, 0), Math.PI / 2
-                );
-
-                const m = new THREE.Matrix4().fromArray(matrix);
-                const l = new THREE.Matrix4()
-                    .makeTranslation(mc.x, mc.y, mc.z)
-                    .scale(new THREE.Vector3(
-                        mc.meterInMercatorCoordinateUnits(),
-                        -mc.meterInMercatorCoordinateUnits(),
-                        mc.meterInMercatorCoordinateUnits()
-                    ))
-                    .multiply(rotationX);
-
-                this.camera.projectionMatrix = m.multiply(l);
-                this.renderer.state.reset();
-                this.renderer.render(this.scene, this.camera);
-                map.triggerRepaint();
-            }
-        };
-
-   
-        map.addLayer(customLayer, "srcd-points-layer");
-    });
+    map.on("render", render);
+  });
 }
 
-
-document.getElementById("toggle-3d").addEventListener("change", (e) => {
-    const visible = e.target.checked ? "visible" : "none";
-
-    ["solar-forebay-south", "bench-nw", "closet-ne"].forEach(id => {
-        if (map.getLayer(id)) {
-            map.setLayoutProperty(id, "visibility", visible);
-        }
-    });
-});
-
-document.getElementById("zoom-out").addEventListener("click", () => {
-    map.easeTo({
-        center: [-122.515, 37.97],
-        zoom: 13.5,
-        duration: 1200
-    });
-});
-
-document.getElementById("zoom-reset").addEventListener("click", () => {
-    map.easeTo({
-        center: [-122.513922, 37.966597],
-        zoom: 17.5,
-        pitch: 60,
-        duration: 1200
-    });
-});
+document.getElementById("reset-view").addEv
