@@ -1,10 +1,6 @@
-
-mapboxgl.accessToken =
-    "pk.eyJ1Ijoic25iZW5vaSIsImEiOiJjbWg5Y2IweTAwbnRzMm5xMXZrNnFnbmY5In0.Lza9yPTlMhbHE5zHNRb1aA";
-
+mapboxgl.accessToken = 'pk.eyJ1Ijoic25iZW5vaSIsImEiOiJjbWg5Y2IweTAwbnRzMm5xMXZrNnFnbmY5In0.Lza9yPTlMhbHE5zHNRb1aA';
 
 const SRCD_CENTER = [-122.514522, 37.967155];
-
 
 const map = new mapboxgl.Map({
     container: 'map',
@@ -16,22 +12,71 @@ const map = new mapboxgl.Map({
     antialias: true
 });
 
+let scene, camera, renderer;
 
-const gl = map.getCanvas().getContext("webgl", { antialias: true });
+function initThreeJS() {
+    const container = document.getElementById('three-container');
 
-const renderer = new THREE.WebGLRenderer({
-    canvas: map.getCanvas(),
-    context: gl,
-    antialias: true,
-    alpha: true
-});
-renderer.autoClear = false;
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(
+        45,
+        container.clientWidth / container.clientHeight,
+        0.1,
+        2000
+    );
 
-const scene = new THREE.Scene();
-const camera = new THREE.Camera();
+    renderer = new THREE.WebGLRenderer({ alpha: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.autoClear = true;
+    container.appendChild(renderer.domElement);
 
-const loader = new THREE.GLTFLoader();
+    animate();
+}
 
+function animate() {
+    requestAnimationFrame(animate);
+    renderer.render(scene, camera);
+}
+
+
+function lngLatToPosition(lng, lat) {
+    const m = mapboxgl.MercatorCoordinate.fromLngLat([lng, lat], 0);
+
+
+    const scale = m.meterInMercatorCoordinateUnits();
+
+    return {
+        x: m.x / scale,
+        y: 0,
+        z: -m.y / scale
+    };
+}
+
+
+function loadGLB(path, lng, lat, scale = 1) {
+    const loader = new THREE.GLTFLoader();
+
+    loader.load(
+        path,
+        function (gltf) {
+
+            const model = gltf.scene;
+
+            const pos = lngLatToPosition(lng, lat);
+            model.position.set(pos.x, pos.y, pos.z);
+
+
+            model.rotation.x = Math.PI / 2;
+
+            model.scale.set(scale, scale, scale);
+            scene.add(model);
+        },
+        undefined,
+        function (error) {
+            console.error("Error loading GLB:", error);
+        }
+    );
+}
 
 const modelAssignments = [
     {
@@ -51,37 +96,15 @@ const modelAssignments = [
     }
 ];
 
+map.on('load', () => {
 
-function lngLatToVector(lng, lat) {
-    const mc = mapboxgl.MercatorCoordinate.fromLngLat([lng, lat], 0);
-    return new THREE.Vector3(mc.x, mc.y, mc.z);
-}
+    initThreeJS();
 
-
-map.on("load", () => {
 
     modelAssignments.forEach(item => {
-        loader.load(item.glb, gltf => {
-            const model = gltf.scene;
-
-            const v = lngLatToVector(item.coords[0], item.coords[1]);
-
-            model.position.copy(v);
-            model.scale.set(5, 5, 5);
-            model.rotation.x = Math.PI / 2;
-
-            scene.add(model);
-        });
+        loadGLB(item.glb, item.coords[0], item.coords[1], 6);
     });
 });
-
-
-
-map.on("render", () => {
-    renderer.state.reset();
-    renderer.render(scene, camera);
-});
-
 
 
 document.getElementById("zoomRegion").addEventListener("click", () => {
