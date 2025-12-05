@@ -1,232 +1,198 @@
-// ------------------------------
-// VERSION 12_9 — FINAL FIXED JS
-// ------------------------------
-
+// -------------------------
+// MAP INITIALIZATION
+// -------------------------
 mapboxgl.accessToken =
-  "pk.eyJ1Ijoic25iZW5vaSIsImEiOiJjbWg5Y2IweTAwbnRzMm5xMXZrNnFnbmY5In0.Lza9yPTlMhbHE5zHNRb1aA";
-
-// ------- MAP SETUP (same as 12_8) -------
-const SRCD_CENTER = [-122.513922, 37.966597];
+    "pk.eyJ1Ijoic25iZW5vaSIsImEiOiJjbWg5Y2IweTAwbnRzMm5xMXZrNnFnbmY5In0.Lza9yPTlMhbHE5zHNRb1aA";
 
 const map = new mapboxgl.Map({
     container: "map",
     style: "mapbox://styles/mapbox/standard",
     config: { basemap: { theme: "monochrome" } },
-
-    center: SRCD_CENTER,
-    zoom: 17.5,
+    zoom: 16.5,
+    center: [-122.2585, 37.8755],
     pitch: 60,
+    bearing: 20,
     antialias: true
 });
 
-// ======== LOAD GEOJSON POINTS (UPDATED TO YOUR FILE) =========
-fetch("https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/data/619data.geojson")
-    .then(r => r.json())
-    .then(geojson => {
-        map.on("load", () => {
+// -------------------------
+// LOAD GEOJSON
+// -------------------------
+const pointsURL = "points.geojson";   // <- your GeoJSON file
 
-            // 3D BUILDINGS RESTORED
-            add3DBuildings();
+// Preload GLTF loader
+const THREE_JS = window.THREE;
+const gltfLoader = new THREE.GLTFLoader();
 
-            // --- POINT SOURCE ---
-            map.addSource("srcd-points", {
-                type: "geojson",
-                data: geojson
-            });
+// Store active 3D models
+const activeModels = [];
 
-            // POINTS ABOVE LABELS (as in 12_8)
-            map.addLayer({
-                id: "srcd-points-layer",
-                type: "circle",
-                source: "srcd-points",
-                paint: {
-                    "circle-radius": 8,
-                    "circle-color": "#ff5500",
-                    "circle-stroke-width": 2,
-                    "circle-stroke-color": "#ffffff"
-                }
-            }, "road-label");
+// -------------------------
+// MAIN STYLE.LOAD EVENT
+// -------------------------
+map.on("style.load", () => {
+    console.log("STYLE LOADED");
 
-            // --- CLICK POPUP RESTORED ---
-            map.on("click", "srcd-points-layer", (e) => {
-                const props = e.features[0].properties;
+    // 1. Add 3D buildings
+    add3DBuildings();
 
-                const html = `
-                    <strong>${props.Landmark}</strong><br>
-                    ${props.Address || ""}<br><br>
-                    ${props.Proposal || ""}
-                `;
+    // 2. Load GeoJSON → add points + one GLB per point
+    loadPointsAndModels();
+});
 
-                new mapboxgl.Popup()
-                    .setLngLat(e.lngLat)
-                    .setHTML(html)
-                    .addTo(map);
-            });
-
-            // Load .glb models after points
-            add3DModels();
-        });
-    });
-
-
-// =============== RESTORE 3D BUILDINGS ===================
+// -------------------------
+// ADD 3D BUILDINGS
+// -------------------------
 function add3DBuildings() {
-
     const layers = map.getStyle().layers;
-    let labelLayerId;
-
-    for (const layer of layers) {
-        if (layer.type === "symbol" && layer.layout["text-field"]) {
-            labelLayerId = layer.id;
-            break;
-        }
-    }
+    const labelLayerId = layers.find(layer => layer.type === "symbol")?.id;
 
     map.addLayer(
         {
             id: "3d-buildings",
+            type: "fill-extrusion",
             source: "composite",
             "source-layer": "building",
-            filter: ["==", "extrude", "true"],
-            type: "fill-extrusion",
-            minzoom: 15,
+            filter: ["==", ["get", "extrude"], "true"],
             paint: {
-                "fill-extrusion-color": "#aaa",
-                "fill-extrusion-height": [
-                    "interpolate", ["linear"], ["zoom"],
-                    15, 0,
-                    15.05, ["get", "height"]
-                ],
-                "fill-extrusion-base": [
-                    "interpolate", ["linear"], ["zoom"],
-                    15, 0,
-                    15.05, ["get", "min_height"]
-                ],
-                "fill-extrusion-opacity": 0.6
+                "fill-extrusion-color": "#aaaaaa",
+                "fill-extrusion-height": ["get", "height"],
+                "fill-extrusion-base": ["get", "min_height"],
+                "fill-extrusion-opacity": 0.7
             }
         },
         labelLayerId
     );
 }
 
+// -------------------------
+// LOAD POINTS + ADD CIRCLES + 3D MODELS
+// -------------------------
+async function loadPointsAndModels() {
+    const response = await fetch(pointsURL);
+    const geojson = await response.json();
 
+    map.addSource("points", {
+        type: "geojson",
+        data: geojson
+    });
 
-// =============== 3D MODELS (UPDATED WITH YOUR 3 FILES) ===============
-function add3DModels() {
-
-    const THREE = window.THREE;
-    const loader = new THREE.GLTFLoader();
-
-    // *** UPDATED WITH YOUR EXACT FILE PATHS ***
-    const models = [
-        // SOUTH coordinate → pond_pack.glb
-        {
-            id: "south-model",
-            file: "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/pond_pack.glb",
-            coords: [-122.51472840835794, 37.96556501819977]
-        },
-
-        // NW coordinate → bench.glb
-        {
-            id: "nw-model",
-            file: "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/bench.glb",
-            coords: [-122.51255653080607, 37.96784675899259]
-        },
-
-        // NE coordinate → closet.glb
-        {
-            id: "ne-model",
-            file: "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/closet.glb",
-            coords: [-122.51172577538132, 37.96756766223187]
+    map.addLayer({
+        id: "point-circles",
+        type: "circle",
+        source: "points",
+        paint: {
+            "circle-radius": 8,
+            "circle-color": "#ff5500",
+            "circle-stroke-width": 2,
+            "circle-stroke-color": "white"
         }
-    ];
+    });
 
-    // Create a single custom 3D scene for all models
-    models.forEach(model => {
+    // Create GLB model for each point
+    geojson.features.forEach((feature, index) => {
+        const coords = feature.geometry.coordinates;
 
-        const mc = mapboxgl.MercatorCoordinate.fromLngLat(model.coords, 0);
-
-        const customLayer = {
-            id: model.id,
-            type: "custom",
-            renderingMode: "3d",
-
-            onAdd: (map, gl) => {
-
-                this.camera = new THREE.Camera();
-                this.scene = new THREE.Scene();
-
-                // LIGHT
-                const light = new THREE.DirectionalLight(0xffffff, 1.2);
-                light.position.set(100, 100, 200);
-                this.scene.add(light);
-
-                // LOAD GLB
-                loader.load(model.file, (gltf) => {
-                    const obj = gltf.scene;
-
-                    // MATCH SCALE
-                    const scale = mc.meterInMercatorCoordinateUnits();
-                    obj.scale.set(scale, scale, scale);
-
-                    this.scene.add(obj);
-                });
-
-                // SHARED RENDERER
-                this.renderer = new THREE.WebGLRenderer({
-                    canvas: map.getCanvas(),
-                    context: gl,
-                    antialias: true
-                });
-                this.renderer.autoClear = false;
-            },
-
-            render: (gl, matrix) => {
-
-                const rotationX = new THREE.Matrix4()
-                    .makeRotationAxis(new THREE.Vector3(1, 0, 0), Math.PI / 2);
-
-                const m = new THREE.Matrix4().fromArray(matrix);
-
-                const l = new THREE.Matrix4()
-                    .makeTranslation(mc.x, mc.y, mc.z)
-                    .scale(new THREE.Vector3(
-                        mc.meterInMercatorCoordinateUnits(),
-                        -mc.meterInMercatorCoordinateUnits(),
-                        mc.meterInMercatorCoordinateUnits()
-                    ))
-                    .multiply(rotationX);
-
-                this.camera.projectionMatrix = m.multiply(l);
-
-                this.renderer.state.reset();
-                this.renderer.render(this.scene, this.camera);
-                map.triggerRepaint();
-            }
-        };
-
-        // IMPORTANT: 3D MODELS ABOVE POINTS
-        map.addLayer(customLayer, "srcd-points-layer");
+        addGLBModelAt(coords, index);
     });
 }
 
+// -------------------------
+// ADD A GLB MODEL AT A COORDINATE
+// -------------------------
+function addGLBModelAt(lngLat, index) {
+    const merc = mapboxgl.MercatorCoordinate.fromLngLat(lngLat, 0);
 
+    const modelTransform = {
+        translateX: merc.x,
+        translateY: merc.y,
+        translateZ: merc.z,
+        rotateX: Math.PI / 2,
+        rotateY: 0,
+        rotateZ: 0,
+        scale: merc.meterInMercatorCoordinateUnits() * 0.7
+    };
 
-// =============== ZOOM BUTTONS (UNCHANGED) ===============
-document.getElementById("zoomRegion").onclick = () =>
-  map.flyTo({
-    center: SRCD_CENTER,
-    zoom: map.getZoom() - 5,
-    pitch: 60,
-    bearing: -20,
-    speed: 0.8
-  });
+    const layerId = "glb-model-" + index;
 
-document.getElementById("resetView").onclick = () =>
-  map.flyTo({
-    center: SRCD_CENTER,
-    zoom: 17.5,
-    pitch: 60,
-    bearing: -20,
-    speed: 0.8
-  });
+    const customLayer = {
+        id: layerId,
+        type: "custom",
+        renderingMode: "3d",
+        onAdd: function (map, gl) {
+            this.scene = new THREE_JS.Scene();
+            this.camera = new THREE_JS.Camera();
+
+            // Lighting
+            const light = new THREE_JS.DirectionalLight(0xffffff);
+            light.position.set(0, 70, 100).normalize();
+            this.scene.add(light);
+
+            // Load the model
+            gltfLoader.load("model.glb", gltf => {
+                this.scene.add(gltf.scene);
+            });
+
+            this.renderer = new THREE_JS.WebGLRenderer({
+                canvas: map.getCanvas(),
+                context: gl,
+                antialias: true
+            });
+
+            this.renderer.autoClear = false;
+        },
+
+        render: function (gl, matrix) {
+            const m = new THREE_JS.Matrix4().fromArray(matrix);
+            const l = new THREE_JS.Matrix4()
+                .makeTranslation(
+                    modelTransform.translateX,
+                    modelTransform.translateY,
+                    modelTransform.translateZ
+                )
+                .scale(
+                    new THREE_JS.Vector3(
+                        modelTransform.scale,
+                        -modelTransform.scale,
+                        modelTransform.scale
+                    )
+                )
+                .multiply(
+                    new THREE_JS.Matrix4().makeRotationAxis(
+                        new THREE_JS.Vector3(1, 0, 0),
+                        modelTransform.rotateX
+                    )
+                );
+
+            this.camera.projectionMatrix = m.multiply(l);
+            this.renderer.state.reset();
+            this.renderer.render(this.scene, this.camera);
+
+            map.triggerRepaint();
+        }
+    };
+
+    map.addLayer(customLayer);
+    activeModels.push(layerId);
+}
+
+// -------------------------
+// UI BUTTONS (unchanged)
+// -------------------------
+document.getElementById("zoomRegion").onclick = () => {
+    map.flyTo({
+        center: [-122.259, 37.875],
+        zoom: 16.8,
+        pitch: 60,
+        bearing: 20
+    });
+};
+
+document.getElementById("resetView").onclick = () => {
+    map.flyTo({
+        center: [-122.2585, 37.8755],
+        zoom: 16.5,
+        pitch: 60,
+        bearing: 20
+    });
+};
