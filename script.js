@@ -30,7 +30,7 @@ function sameCoord(a, b, tol = 1e-6) {
 }
 
 // ================================
-// MAIN ENTRY: style.load
+// MAIN ENTRY
 // ================================
 map.on("style.load", async () => {
 
@@ -39,13 +39,13 @@ map.on("style.load", async () => {
     const resp = await fetch(pointsURL);
     const geojson = await resp.json();
 
-    addModelsFromGeoJSON(geojson);   // models added FIRST
-    addPointsLayer(geojson);         // then points are added ABOVE models
+    addModelsFromGeoJSON(geojson);   // Models first (below points)
+    addPointsLayer(geojson);         // Points visible on top
     setupToggles();
 });
 
 // ================================
-// 3D BUILDINGS (unchanged)
+// 3D BUILDINGS (UNCHANGED)
 // ================================
 function add3DBuildings() {
     try {
@@ -75,9 +75,10 @@ function add3DBuildings() {
 }
 
 // ================================
-// ADD MODELS (FIXED VERSION)
+// ADD MODELS USING GEOJSON
 // ================================
 async function addModelsFromGeoJSON(geojson) {
+
     const known = {
         pond: [-122.51472840835794, 37.96556501819977],
         bench: [-122.51255653080607, 37.96784675899259],
@@ -88,8 +89,8 @@ async function addModelsFromGeoJSON(geojson) {
 
     for (const feature of geojson.features) {
         const coords = feature.geometry.coordinates;
-        let key = null;
 
+        let key = null;
         if (sameCoord(coords, known.pond)) key = "pond";
         else if (sameCoord(coords, known.bench)) key = "bench";
         else if (sameCoord(coords, known.closet)) key = "closet";
@@ -97,6 +98,7 @@ async function addModelsFromGeoJSON(geojson) {
 
         const modelUrl = MODEL_URLS[key];
         const layerId = `model-${key}`;
+
         const mc = mapboxgl.MercatorCoordinate.fromLngLat(coords, 0);
 
         const customLayer = {
@@ -108,35 +110,28 @@ async function addModelsFromGeoJSON(geojson) {
                 this.camera = new THREE.Camera();
                 this.scene = new THREE.Scene();
 
-                // --- Always-visible neutral lighting ---
-const ambient = new THREE.AmbientLight(0xffffff, 1.1);
-this.scene.add(ambient);
+                // --- MUCH better lighting ---
+                const ambient = new THREE.AmbientLight(0xffffff, 1.4);
+                this.scene.add(ambient);
 
-const hemi = new THREE.HemisphereLight(0xffffff, 0x888888, 1.2);
-this.scene.add(hemi);
-
-
-
+                const dir = new THREE.DirectionalLight(0xffffff, 1.2);
+                dir.position.set(150, 200, 300);
+                this.scene.add(dir);
 
                 loader.load(modelUrl, (gltf) => {
-    const model = gltf.scene;
+                    const model = gltf.scene;
 
-    // -------------------------
-    // MUCH BIGGER SCALE (VISIBLE NOW)
-    // -------------------------
-    const base = mc.meterInMercatorCoordinateUnits();
-    const scale = base * 500;  // Increase to 800 or 1200 if needed
-    model.scale.set(scale, scale, scale);
+                    // Small but visible scale
+                    const base = mc.meterInMercatorCoordinateUnits();
+                    const scale = base * 3;   // << SMALL + correctly sized
+                    model.scale.set(scale, scale, scale);
 
-    // -------------------------
-    // FIXED ROTATION (ONE TIME)
-    // -------------------------
-    model.rotation.x = Math.PI / 2;
+                    // Fix rotation
+                    model.rotation.x = Math.PI / 2;
 
-    loadedModels[key] = { mesh: model, layerId };
-    this.scene.add(model);
-});
-
+                    loadedModels[key] = { mesh: model, layerId };
+                    this.scene.add(model);
+                });
 
                 this.renderer = new THREE.WebGLRenderer({
                     canvas: mapInstance.getCanvas(),
@@ -149,24 +144,27 @@ this.scene.add(hemi);
             render: function (gl, matrix) {
                 const m = new THREE.Matrix4().fromArray(matrix);
 
-                const l = new THREE.Matrix4()
-                    .makeTranslation(mc.x, mc.y, mc.z);
+                const l = new THREE.Matrix4().makeTranslation(
+                    mc.x, mc.y, mc.z
+                );
 
                 this.camera.projectionMatrix = m.multiply(l);
+
                 this.renderer.state.reset();
                 this.renderer.render(this.scene, this.camera);
                 map.triggerRepaint();
             }
         };
 
-        map.addLayer(customLayer);  // <-- now below points, above basemap
+        map.addLayer(customLayer);
     }
 }
 
 // ================================
-// POINTS LAYER (unchanged)
+// POINTS LAYER (VISIBLE ON TOP)
 // ================================
 function addPointsLayer(geojson) {
+
     if (!map.getSource("points")) {
         map.addSource("points", { type: "geojson", data: geojson });
     }
@@ -185,7 +183,7 @@ function addPointsLayer(geojson) {
 }
 
 // ================================
-// CHECKBOX TOGGLES (unchanged)
+// CHECKBOX TOGGLES
 // ================================
 function setupToggles() {
     const pondBox = document.getElementById("togglePond");
@@ -204,7 +202,7 @@ function setupToggles() {
 }
 
 // ================================
-// BUTTONS (unchanged)
+// BUTTONS (UNCHANGED)
 // ================================
 document.getElementById("zoomRegion").onclick = () =>
     map.flyTo({
