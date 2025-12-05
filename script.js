@@ -1,11 +1,8 @@
-// -----------------------------
-// script.js — updated for correct 3D visibility + working checkboxes
-// -----------------------------
-
 mapboxgl.accessToken =
   "pk.eyJ1Ijoic25iZW5vaSIsImEiOiJjbWg5Y2IweTAwbnRzMm5xMXZrNnFnbmY5In0.Lza9yPTlMhbHE5zHNRb1aA";
 
 const SRCD_CENTER = [-122.514522, 37.967155];
+
 
 const map = new mapboxgl.Map({
   container: "map",
@@ -17,42 +14,45 @@ const map = new mapboxgl.Map({
   antialias: true
 });
 
-// ------------------------------------------------------------------
-// THREE MODEL DEFINITIONS
-// ------------------------------------------------------------------
+
 const modelData = [
   {
     id: "pond-model",
     coords: [-122.51465, 37.9669],
     url: "assets/images/pond_pack.glb",
-    visible: true
+    visible: true,
+    altitude: 25,
+    scale: 1.4,
+    rotationX: 0
   },
   {
     id: "bench-model",
     coords: [-122.5151, 37.96765],
     url: "assets/images/bench.glb",
-    visible: true
+    visible: true,
+    altitude: 25,
+    scale: 1.4,
+    rotationX: 0
   },
   {
     id: "closet-model",
     coords: [-122.514, 37.9677],
     url: "assets/images/closet.glb",
-    visible: true
+    visible: true,
+    altitude: 25,
+    scale: 1.4,
+    rotationX: 0
   }
 ];
 
 let THREEJS;
 const loadedModels = [];
 
-// ------------------------------------------------------------------
-// MAP LOAD
-// ------------------------------------------------------------------
-map.on("load", async () => {
+//map
+map.on("load", () => {
   THREEJS = window.THREE;
 
-  // ---------------------------------------------------------------
-  // RESTORE MAPBOX 3D BUILDINGS
-  // ---------------------------------------------------------------
+ //3d buildings
   const layers = map.getStyle().layers;
   let labelLayerId = null;
 
@@ -97,9 +97,7 @@ map.on("load", async () => {
     labelLayerId
   );
 
-  // ---------------------------------------------------------------
-  // ADD CUSTOM THREE.JS LAYER (your objects)
-  // ---------------------------------------------------------------
+//custom
   const customLayer = {
     id: "srcd-3d-models",
     type: "custom",
@@ -109,14 +107,6 @@ map.on("load", async () => {
       this.camera = new THREE.Camera();
       this.scene = new THREE.Scene();
 
-      const light1 = new THREE.DirectionalLight(0xffffff, 0.9);
-      light1.position.set(0, -70, 100).normalize();
-      this.scene.add(light1);
-
-      const light2 = new THREE.DirectionalLight(0xffffff, 0.6);
-      light2.position.set(0, 70, 100).normalize();
-      this.scene.add(light2);
-
       this.renderer = new THREE.WebGLRenderer({
         canvas: mapInstance.getCanvas(),
         context: gl,
@@ -124,6 +114,14 @@ map.on("load", async () => {
         alpha: true
       });
       this.renderer.autoClear = false;
+
+      const light1 = new THREE.DirectionalLight(0xffffff, 1);
+      light1.position.set(100, -100, 150);
+      this.scene.add(light1);
+
+      const light2 = new THREE.DirectionalLight(0xffffff, 0.7);
+      light2.position.set(-100, 100, 150);
+      this.scene.add(light2);
 
       this.loader = new THREE.GLTFLoader();
 
@@ -133,12 +131,20 @@ map.on("load", async () => {
           (gltf) => {
             const model = gltf.scene;
 
-            const merc = mapboxgl.MercatorCoordinate.fromLngLat(m.coords, 0);
+            const merc = mapboxgl.MercatorCoordinate.fromLngLat(
+              m.coords,
+              m.altitude
+            );
             const scale = merc.meterInMercatorCoordinateUnits();
 
-            model.scale.set(scale * 0.05, scale * 0.05, scale * 0.05);
+            model.scale.set(
+              scale * m.scale,
+              scale * m.scale,
+              scale * m.scale
+            );
+
             model.position.set(merc.x, merc.y, merc.z);
-            model.rotation.x = Math.PI / 2;
+            model.rotation.x = m.rotationX;
 
             model.visible = m.visible;
 
@@ -146,7 +152,7 @@ map.on("load", async () => {
             this.scene.add(model);
           },
           undefined,
-          (err) => console.error("GLTF error:", m.url, err)
+          (err) => console.error("Model load error:", m.url, err)
         );
       });
     },
@@ -159,45 +165,33 @@ map.on("load", async () => {
     }
   };
 
-  // Put 3D objects ABOVE buildings but BELOW point layer
   map.addLayer(customLayer, "3d-buildings");
 
-  // ---------------------------------------------------------------
-  // ENSURE POINTS ARE ALWAYS ON TOP
-  // ---------------------------------------------------------------
-  const pointLayerId = "srcd-points"; // <-- the ID from 12_3
-  if (map.getLayer(pointLayerId)) {
-    map.moveLayer(pointLayerId);
-  }
+//pts
+  map.once("idle", () => {
+    if (map.getLayer("srcd-points")) {
+      map.moveLayer("srcd-points");
+    }
+  });
 
-  // ---------------------------------------------------------------
-  // CHECKBOXES CONTROL MODEL VISIBILITY
-  // ---------------------------------------------------------------
-  function setModelVisibility(id, visible) {
-    const entry = loadedModels.find((m) => m.id === id);
-    if (entry && entry.mesh) entry.mesh.visible = visible;
-  }
+//toggle
+  const toggle = (checkboxId, modelId) => {
+    const box = document.getElementById(checkboxId);
+    if (!box) return;
 
-  document.getElementById("togglePond")
-    .addEventListener("change", (e) =>
-      setModelVisibility("pond-model", e.target.checked)
-    );
+    box.addEventListener("change", (e) => {
+      const entry = loadedModels.find((m) => m.id === modelId);
+      if (entry) entry.mesh.visible = e.target.checked;
+    });
+  };
 
-  document.getElementById("toggleBench")
-    .addEventListener("change", (e) =>
-      setModelVisibility("bench-model", e.target.checked)
-    );
-
-  document.getElementById("toggleCloset")
-    .addEventListener("change", (e) =>
-      setModelVisibility("closet-model", e.target.checked)
-    );
+  toggle("togglePond", "pond-model");
+  toggle("toggleBench", "bench-model");
+  toggle("toggleCloset", "closet-model");
 });
 
-// ------------------------------------------------------------------
-// BUTTON CONTROLS (unchanged)
-// ------------------------------------------------------------------
-document.getElementById("zoomRegion").addEventListener("click", () => {
+//button
+document.getElementById("zoomRegion").onclick = () =>
   map.flyTo({
     center: SRCD_CENTER,
     zoom: map.getZoom() - 5,
@@ -205,9 +199,8 @@ document.getElementById("zoomRegion").addEventListener("click", () => {
     bearing: -20,
     speed: 0.8
   });
-});
 
-document.getElementById("resetView").addEventListener("click", () => {
+document.getElementById("resetView").onclick = () =>
   map.flyTo({
     center: SRCD_CENTER,
     zoom: 17,
@@ -215,4 +208,3 @@ document.getElementById("resetView").addEventListener("click", () => {
     bearing: -20,
     speed: 0.8
   });
-});
