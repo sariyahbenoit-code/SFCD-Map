@@ -113,22 +113,24 @@ async function addModelsFromGeoJSON(geojson) {
                 this.scene.add(light);
 
                 loader.load(modelUrl, (gltf) => {
-                    const model = gltf.scene;
+    const model = gltf.scene;
 
-                    // -------------------------
-                    // FIXED SCALE (VISIBLE NOW)
-                    // -------------------------
-                    const scale = mc.meterInMercatorCoordinateUnits() * 20;
-                    model.scale.set(scale, scale, scale);
+    // -------------------------
+    // MUCH BIGGER SCALE (VISIBLE NOW)
+    // -------------------------
+    const base = mc.meterInMercatorCoordinateUnits();
+    const scale = base * 500;  // Increase to 800 or 1200 if needed
+    model.scale.set(scale, scale, scale);
 
-                    // -------------------------
-                    // FIXED ROTATION (ONE TIME)
-                    // -------------------------
-                    model.rotation.x = Math.PI / 2;
+    // -------------------------
+    // FIXED ROTATION (ONE TIME)
+    // -------------------------
+    model.rotation.x = Math.PI / 2;
 
-                    loadedModels[key] = { mesh: model, layerId };
-                    this.scene.add(model);
-                });
+    loadedModels[key] = { mesh: model, layerId };
+    this.scene.add(model);
+});
+
 
                 this.renderer = new THREE.WebGLRenderer({
                     canvas: mapInstance.getCanvas(),
