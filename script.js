@@ -1,4 +1,12 @@
 // ================================
+// GLOBAL MODEL SCALE FACTOR
+// ================================
+// Reduce this number to shrink all GLBs. Increase to enlarge.
+// 1.0 = current size, 0.2 = 1/5 smaller, etc.
+const MODEL_SCALE_FACTOR = 1.0;
+
+
+// ================================
 // MAP INITIALIZATION (UNCHANGED)
 // ================================
 mapboxgl.accessToken =
@@ -80,11 +88,10 @@ function add3DBuildings() {
 }
 
 // ================================
-// ADD MODELS — CORRECT SIZE + POSITION
+// ADD MODELS — WITH GLOBAL SCALE VARIABLE
 // ================================
 async function addModelsFromGeoJSON(geojson) {
 
-    // absolute coordinates (unchanged)
     const known = {
         pond: [-122.51472840835794, 37.96556501819977],
         bench: [-122.51255653080607, 37.96784675899259],
@@ -105,7 +112,6 @@ async function addModelsFromGeoJSON(geojson) {
         const modelUrl = MODEL_URLS[key];
         const layerId = `model-${key}`;
 
-        // position in mercator space
         const mc = mapboxgl.MercatorCoordinate.fromLngLat(coords, 0);
 
         const customLayer = {
@@ -117,9 +123,7 @@ async function addModelsFromGeoJSON(geojson) {
                 this.camera = new THREE.Camera();
                 this.scene = new THREE.Scene();
 
-                // ==========================
-                // 🔆 IMPROVED LIGHTING
-                // ==========================
+                // lighting (unchanged)
                 const sun = new THREE.DirectionalLight(0xffffff, 1.5);
                 sun.position.set(150, 200, 300);
                 this.scene.add(sun);
@@ -130,19 +134,15 @@ async function addModelsFromGeoJSON(geojson) {
                 loader.load(modelUrl, (gltf) => {
                     const model = gltf.scene;
 
-                    // ==========================
-                    // 🎯 CORRECT SMALL MODEL SCALE
-                    // ==========================
+                    // base conversion
                     const base = mc.meterInMercatorCoordinateUnits();
 
-                    // Smaller + consistent size
-                    const scale = base * 20;     // ← tuned size
+                    // 🎯 apply global scale variable
+                    const scale = base * 20 * MODEL_SCALE_FACTOR;
+
                     model.scale.set(scale, scale, scale);
 
-                    // proper rotation for Mapbox
                     model.rotation.x = Math.PI / 2;
-
-                    // center the model exactly over the point
                     model.position.set(0, 0, 0);
 
                     loadedModels[key] = { mesh: model, layerId };
