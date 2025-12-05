@@ -13,7 +13,7 @@ const map = new mapboxgl.Map({
         }
     },
     zoom: 18,
-    center: [148.9819, -35.3981],
+    center: [-122.514522, 37.967155 ],
     pitch: 60,
     antialias: true
 });
