@@ -136,7 +136,7 @@ async function addModelsFromGeoJSON(geojson) {
                     const base = mc.meterInMercatorCoordinateUnits();
 
                     // Smaller + consistent size
-                    const scale = base * 80;     // ← tuned size
+                    const scale = base * 20;     // ← tuned size
                     model.scale.set(scale, scale, scale);
 
                     // proper rotation for Mapbox
