@@ -19,8 +19,8 @@ const map = new mapboxgl.Map({
     antialias: true
 });
 
-// ======== LOAD GEOJSON POINTS (FROM 12_8) =========
-fetch("data/619data.geojson")
+// ======== LOAD GEOJSON POINTS (UPDATED TO YOUR FILE) =========
+fetch("https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/data/619data.geojson")
     .then(r => r.json())
     .then(geojson => {
         map.on("load", () => {
@@ -111,27 +111,32 @@ function add3DBuildings() {
 
 
 
-// =============== 3D MODELS (FROM 12_8, FIXED ORDERING) ===============
+// =============== 3D MODELS (UPDATED WITH YOUR 3 FILES) ===============
 function add3DModels() {
 
     const THREE = window.THREE;
     const loader = new THREE.GLTFLoader();
 
-    // SAME COORDS + FILES FROM 12_8
+    // *** UPDATED WITH YOUR EXACT FILE PATHS ***
     const models = [
+        // SOUTH coordinate → pond_pack.glb
         {
-            id: "solar-forebay-south",
-            file: "assets/images/pond_pack.glb",
+            id: "south-model",
+            file: "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/pond_pack.glb",
             coords: [-122.51472840835794, 37.96556501819977]
         },
+
+        // NW coordinate → bench.glb
         {
-            id: "bench-nw",
-            file: "assets/images/bench.glb",
+            id: "nw-model",
+            file: "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/bench.glb",
             coords: [-122.51255653080607, 37.96784675899259]
         },
+
+        // NE coordinate → closet.glb
         {
-            id: "closet-ne",
-            file: "assets/images/closet.glb",
+            id: "ne-model",
+            file: "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/closet.glb",
             coords: [-122.51172577538132, 37.96756766223187]
         }
     ];
@@ -160,7 +165,7 @@ function add3DModels() {
                 loader.load(model.file, (gltf) => {
                     const obj = gltf.scene;
 
-                    // MATCH SCALE FROM 12_8 (1,1,1 with Mercator scaling)
+                    // MATCH SCALE
                     const scale = mc.meterInMercatorCoordinateUnits();
                     obj.scale.set(scale, scale, scale);
 
