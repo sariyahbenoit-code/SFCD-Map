@@ -108,12 +108,14 @@ async function addModelsFromGeoJSON(geojson) {
                 this.camera = new THREE.Camera();
                 this.scene = new THREE.Scene();
 
-                // Even lighting from all angles
-const ambient = new THREE.AmbientLight(0xffffff, 1.0);
+                // --- Always-visible neutral lighting ---
+const ambient = new THREE.AmbientLight(0xffffff, 1.1);
 this.scene.add(ambient);
 
-const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
+const hemi = new THREE.HemisphereLight(0xffffff, 0x888888, 1.2);
 this.scene.add(hemi);
+
+
 
 
                 loader.load(modelUrl, (gltf) => {
