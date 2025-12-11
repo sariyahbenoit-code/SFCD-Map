@@ -196,8 +196,7 @@ map.on("load", () => {
     map.getCanvas().style.cursor = "";
   });
 
-  // Popup on click using GeoJSON fields + PopupMedia
-    // Popup on click using GeoJSON fields + PopupMedia
+ 
   map.on("click", "srcd-points-layer", (e) => {
     if (!e.features || !e.features.length) return;
     const feature = e.features[0];
@@ -272,12 +271,14 @@ map.on("load", () => {
       }
     }
 
-    new mapboxgl.Popup({ offset: 12 })
+    new mapboxgl.Popup({
+        offset: [0, -150],  
+        anchor: "bottom"
+      })
       .setLngLat(coordinates)
       .setHTML(html)
       .addTo(map);
   });
-
 });
 
 
