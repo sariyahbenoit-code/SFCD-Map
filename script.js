@@ -255,9 +255,27 @@ map.on("load", () => {
         lower.endsWith(".gif") ||
         lower.endsWith(".webp");
 
+         // Embedded media from PopupMedia
+    if (popupMedia) {
+      const lower = popupMedia.toLowerCase();
+      const isImage =
+        lower.endsWith(".jpg") ||
+        lower.endsWith(".jpeg") ||
+        lower.endsWith(".png") ||
+        lower.endsWith(".gif") ||
+        lower.endsWith(".webp");
+
       if (isImage) {
-        html += `<br><br><img src="${popupMedia}" alt="Popup media" style="max-width: 240px; width: 100%; display: block;">`;
+        // Clickable thumbnail -> opens full image in new tab
+        html += `
+          <br><br>
+          <a href="${popupMedia}" target="_blank" style="display:inline-block;">
+            <img src="${popupMedia}" alt="Popup media"
+                 style="max-width: 240px; width: 100%; display: block;">
+          </a>
+        `;
       } else {
+        // PDF or other file
         html += `<br><br><a href="${popupMedia}" target="_blank"><strong>Open attached media</strong></a>`;
       }
     }
