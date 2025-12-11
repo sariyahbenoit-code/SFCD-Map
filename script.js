@@ -14,136 +14,142 @@ const map = new mapboxgl.Map({
     antialias: true
 });
 
+let renderer, scene, camera;
+
+let benchModel, pondModel, closetModel;
+
+const loader = new THREE.GLTFLoader();
+const draco = new THREE.DRACOLoader();
+draco.setDecoderPath(
+  "https://cdn.jsdelivr.net/npm/three@0.159/examples/jsm/libs/draco/"
+);
+loader.setDRACOLoader(draco);
+
+
 // rotating model, transform
 const modelAltitude = 0;
 const modelRotate = [Math.PI / 2, 0, 0];
 
-const modelCoord = mapboxgl.MercatorCoordinate.fromLngLat(modelOrigin, modelAltitude);
 
-const modelTransform = {
-    translateX: modelCoord.x,
-    translateY: modelCoord.y,
-    translateZ: modelCoord.z,
+const benchOrigin = [-122.512606, 37.967814];
+const pondOrigin = [-122.5144361, 37.96595];
+const closetOrigin = [-122.513856, 37.967939];
+
+function makeTransform(origin) {
+  const mc = mapboxgl.MercatorCoordinate.fromLngLat(origin, modelAltitude);
+  return {
+    translateX: mc.x,
+    translateY: mc.y,
+    translateZ: mc.z,
     rotateX: modelRotate[0],
     rotateY: modelRotate[1],
     rotateZ: modelRotate[2],
-    scale: modelCoord.meterInMercatorCoordinateUnits()
-};
-
-// THREE.JS
-let renderer, scene, camera;
-let initialized = false;
-
-let pondModel, benchModel, closetModel;
-
-//loader
-const loader = new GLTFLoader();
-
-async function addModel(url, scale = 1) {
-    return new Promise((resolve, reject) => {
-        loader.load(
-            url,
-            glb => {
-                glb.scene.scale.set(scale, scale, scale);
-                scene.add(glb.scene);
-                resolve(glb.scene);
-            },
-            undefined,
-            reject
-        );
-    });
+    scale: mc.meterInMercatorCoordinateUnits(),
+  };
 }
 
-const draco = new DRACOLoader();
-draco.setDecoderPath("https://cdn.jsdelivr.net/npm/three@0.159/examples/jsm/libs/draco/");
-loader.setDRACOLoader(draco);
 
-function addModel(url, scale = 1) {
-    return new Promise((resolve, reject) => {
-        loader.load(
-            url,
-            glb => {
-                glb.scene.scale.set(scale, scale, scale);
-                scene.add(glb.scene);
-                resolve(glb.scene);
-            },
-            undefined,
-            reject
-        );
-    });
+const benchTransform = makeTransform(benchOrigin);
+const pondTransform = makeTransform(pondOrigin);
+const closetTransform = makeTransform(closetOrigin);
+
+
+async function loadModel(url, scale = 200) {
+  return new Promise((resolve, reject) => {
+    loader.load(
+      url,
+      (gltf) => {
+        gltf.scene.scale.set(scale, scale, scale);
+        resolve(gltf.scene);
+      },
+      undefined,
+      reject
+    );
+  });
 }
 
-//3d model layer
 const customLayer = {
-    id: "3d-model-layer",
-    type: "custom",
-    renderingMode: "3d",
+  id: "3d-model-layer",
+  type: "custom",
+  renderingMode: "3d",
 
-    onAdd: async function (map, gl) {
-        scene = new THREE.Scene();
-        camera = new THREE.Camera();
+  onAdd: async function (map, gl) {
+    scene = new THREE.Scene();
+    camera = new THREE.Camera();
 
-        renderer = new THREE.WebGLRenderer({
-            canvas: map.getCanvas(),
-            context: gl,
-            antialias: true
-        });
-        renderer.autoClear = false;
+    renderer = new THREE.WebGLRenderer({
+      canvas: map.getCanvas(),
+      context: gl,
+      antialias: true,
+    });
+    renderer.autoClear = false;
 
-         benchModel = await addModel("assets/models/bench.glb");
-        closetModel = await addModel("assets/models/closet.glb");
-        pondModel = await addModel("assets/models/pond_pack.glb");
+benchModel = await loadModel("assets/models/bench.glb");
+    pondModel = await loadModel("assets/models/pond_pack.glb");
+    closetModel = await loadModel("assets/models/closet.glb");
 
-        initialized = true;
-    },
+    scene.add(benchModel);
+    scene.add(pondModel);
+    scene.add(closetModel);
+  },
 
-    render: function (gl, matrix) {
-        if (!initialized) return;
+render: function (gl, matrix) {
+    if (!benchModel) return;
 
-        const rotationX = new THREE.Matrix4().makeRotationAxis(
-            new THREE.Vector3(1, 0, 0), modelTransform.rotateX
-        );
-        const rotationY = new THREE.Matrix4().makeRotationAxis(
-            new THREE.Vector3(0, 1, 0), modelTransform.rotateY
-        );
-        const rotationZ = new THREE.Matrix4().makeRotationAxis(
-            new THREE.Vector3(0, 0, 1), modelTransform.rotateZ
-        );
+    renderer.resetState();
 
-        const translation = new THREE.Matrix4().makeTranslation(
-            modelTransform.translateX,
-            modelTransform.translateY,
-            modelTransform.translateZ
-        );
+function renderModel(obj, t) {
+      const rotX = new THREE.Matrix4().makeRotationAxis(
+        new THREE.Vector3(1, 0, 0),
+        t.rotateX
+      );
+      const rotY = new THREE.Matrix4().makeRotationAxis(
+        new THREE.Vector3(0, 1, 0),
+        t.rotateY
+      );
+      const rotZ = new THREE.Matrix4().makeRotationAxis(
+        new THREE.Vector3(0, 0, 1),
+        t.rotateZ
+      );
 
-        const scale = new THREE.Matrix4().makeScale(
-            modelTransform.scale,
-            -modelTransform.scale,
-            modelTransform.scale
-        );
+      const translation = new THREE.Matrix4().makeTranslation(
+        t.translateX,
+        t.translateY,
+        t.translateZ
+      );
 
-        const m = new THREE.Matrix4().fromArray(matrix);
-        const l = new THREE.Matrix4()
-            .multiply(rotationX)
-            .multiply(rotationY)
-            .multiply(rotationZ)
-            .multiply(scale)
-            .multiply(translation);
+      const scale = new THREE.Matrix4().makeScale(
+        t.scale,
+        -t.scale,
+        t.scale
+      );
 
-        camera.projectionMatrix = m.multiply(l);
+      const m = new THREE.Matrix4().fromArray(matrix);
+      const l = new THREE.Matrix4()
+        .multiply(rotX)
+        .multiply(rotY)
+        .multiply(rotZ)
+        .multiply(scale)
+        .multiply(translation);
 
-        renderer.resetState();
-        renderer.render(scene, camera);
-        map.triggerRepaint();
+      camera.projectionMatrix = m.multiply(l);
+
+      renderer.render(scene, camera);
     }
+
+    // Render all 3 models
+    renderModel(benchModel, benchTransform);
+    renderModel(pondModel, pondTransform);
+    renderModel(closetModel, closetTransform);
+
+    map.triggerRepaint();
+  },
 };
 
+// Add 3D model layer to map
 map.on("load", () => {
-    map.addLayer(customLayer);
+  map.addLayer(customLayer);
 });
-
-// REQUIRED — your target center point
-const targetCenter = [-122.514522, 37.967155];
 
 // Button: Zoom to SRCD region (zoom 12)
 document.getElementById("zoomRegion").addEventListener("click", () => {
