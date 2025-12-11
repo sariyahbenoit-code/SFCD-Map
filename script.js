@@ -14,6 +14,8 @@ const map = new mapboxgl.Map({
     antialias: true
 });
 
+import mapboxgl from "https://api.mapbox.com/mapbox-gl-js/v3.17.0/mapbox-gl.js";
+
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.159/build/three.module.js";
 
 import { GLTFLoader } from "https://cdn.jsdelivr.net/npm/three@0.159/examples/jsm/loaders/GLTFLoader.js";
