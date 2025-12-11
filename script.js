@@ -94,26 +94,32 @@ const customLayer = {
     renderer.autoClear = false;
 
     try {
-      benchModel = await loadModel("assets/models/bench.glb");
-      scene.add(benchModel);
-    } catch (e) {
-      console.warn("Bench model not added.");
-    }
+  benchModel = await loadModel(
+    "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/models/bench.glb"
+  );
+  scene.add(benchModel);
+} catch (e) {
+  console.warn("Bench model not added.");
+}
 
-    try {
-      pondModel = await loadModel("assets/models/pond_pack.glb");
-      scene.add(pondModel);
-    } catch (e) {
-      console.warn("Pond model not added.");
-    }
+try {
+  pondModel = await loadModel(
+    "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/models/pond_pack.glb"
+  );
+  scene.add(pondModel);
+} catch (e) {
+  console.warn("Pond model not added.");
+}
 
-    try {
-      closetModel = await loadModel("assets/models/closet.glb");
-      scene.add(closetModel);
-    } catch (e) {
-      console.warn("Closet model not added.");
-    }
-  },
+try {
+  closetModel = await loadModel(
+    "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/models/closet.glb"
+  );
+  scene.add(closetModel);
+} catch (e) {
+  console.warn("Closet model not added.");
+}
+
 
   render: (gl, matrix) => {
     // If no models loaded yet, skip rendering but do not break the map
