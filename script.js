@@ -246,6 +246,7 @@ map.on("load", () => {
     }
 
     // Embedded media from PopupMedia (clickable thumbnail)
+        // Embedded media from PopupMedia (clickable thumbnail)
     if (popupMedia) {
       const lower = popupMedia.toLowerCase();
       const isImage =
@@ -255,26 +256,27 @@ map.on("load", () => {
         lower.endsWith(".gif") ||
         lower.endsWith(".webp");
 
-           if (isImage) {
+      if (isImage) {
+        // Image fills popup width, but at least 600px if space allows
         html +=
           '<br><br>' +
           '<a href="' + popupMedia + '" target="_blank" style="display:inline-block; width: 100%;">' +
             '<img src="' + popupMedia + '" alt="Popup media" ' +
-            'style="display:block; width: 100%; height: auto; max-width: 100%;">' +
+            'style="display:block; width: 100%; height: auto; min-width: 600px; max-width: 100%;">' +
           '</a>';
       } else {
+        // PDF or other file
         html +=
           '<br><br><a href="' + popupMedia +
           '" target="_blank"><strong>Open attached media</strong></a>';
       }
-
+    }
 
     new mapboxgl.Popup({ offset: 12 })
       .setLngLat(coordinates)
       .setHTML(html)
       .addTo(map);
-  });
-});
+
 
 // UI controls
 document.getElementById("zoomRegion").addEventListener("click", () => {
