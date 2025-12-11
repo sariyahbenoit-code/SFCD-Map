@@ -137,7 +137,6 @@ function renderModel(obj, t) {
       renderer.render(scene, camera);
     }
 
-    // Render all 3 models
     renderModel(benchModel, benchTransform);
     renderModel(pondModel, pondTransform);
     renderModel(closetModel, closetTransform);
@@ -146,7 +145,7 @@ function renderModel(obj, t) {
   },
 };
 
-// Add 3D model layer to map
+
 map.on("load", () => {
   map.addLayer(customLayer);
 });
@@ -169,7 +168,7 @@ document.getElementById("resetView").addEventListener("click", () => {
     });
 });
 
-// Checkboxes — add your show/hide logic here
+// Checkboxes 
 document.getElementById("togglePond").addEventListener("change", (e) => {
     // example:
     // map.setLayoutProperty("pond-layer", "visibility", e.target.checked ? "visible" : "none");
@@ -184,18 +183,14 @@ document.getElementById("toggleCloset").addEventListener("change", (e) => {
     console.log("toggle Closet:", e.target.checked);
 });
 
-// ------------------------------
-// MODEL COORDINATES
-// ------------------------------
 
 const benchOrigin  = [-122.512606, 37.967814];
-const pondOrigin   = [-122.5144361, 37.96595];    // fixed negative sign
+const pondOrigin   = [-122.5144361, 37.96595];    
 const closetOrigin = [-122.513856, 37.967939];
 
 const modelAltitude = 0; 
 const modelRotate = [Math.PI / 2, 0, 0];
 
-// convert each origin to Mercator space
 function makeTransform(origin) {
     const mc = mapboxgl.MercatorCoordinate.fromLngLat(origin, modelAltitude);
     return {
@@ -212,10 +207,6 @@ function makeTransform(origin) {
 const benchTransform  = makeTransform(benchOrigin);
 const pondTransform   = makeTransform(pondOrigin);
 const closetTransform = makeTransform(closetOrigin);
-
-// ------------------------------
-// LOAD MODELS
-// ------------------------------
 
 let benchModel, pondModel, closetModel;
 
@@ -249,7 +240,6 @@ const customLayer = {
         });
         renderer.autoClear = false;
 
-        // Load each model
         benchModel  = await loadModel("assets/models/bench.glb");
         pondModel   = await loadModel("assets/models/pond_pack.glb");
         closetModel = await loadModel("assets/models/closet.glb");
@@ -264,7 +254,6 @@ const customLayer = {
 
         renderer.resetState();
 
-        // helper function to render each model with its own transform
         function renderModel(obj, t) {
             const rotX = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(1,0,0), t.rotateX);
             const rotY = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(0,1,0), t.rotateY);
