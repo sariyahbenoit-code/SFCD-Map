@@ -1,128 +1,129 @@
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.159/build/three.module.js";
+import { GLTFLoader } from "https://cdn.jsdelivr.net/npm/three@0.159/examples/jsm/loaders/GLTFLoader.js";
+import { DRACOLoader } from "https://cdn.jsdelivr.net/npm/three@0.159/examples/jsm/loaders/DRACOLoader.js";
+
+// map set up
+
 mapboxgl.accessToken = 'pk.eyJ1Ijoic25iZW5vaSIsImEiOiJjbWg5Y2IweTAwbnRzMm5xMXZrNnFnbmY5In0.Lza9yPTlMhbHE5zHNRb1aA';
+
+const modelOrigin = [-122.514522, 37.967155];
 
 const map = new mapboxgl.Map({
     container: 'map',
     style: 'mapbox://styles/mapbox/standard',
     config: { basemap: { theme: 'monochrome' }},
+    center: modelOrigin,
     zoom: 17,
-    center: [-122.514522, 37.967155],
     pitch: 60,
     antialias: true
 });
 
-// ------- 3D MODEL BUILDER -------
-function makeModelLayer(layerId, modelURL, lng, lat, alt = 0, rotation = [Math.PI/2,0,0]) {
+// rotating model, transform
+const modelAltitude = 0;
+const modelRotate = [Math.PI / 2, 0, 0];
 
-    const merc = mapboxgl.MercatorCoordinate.fromLngLat([lng, lat], alt);
+const modelCoord = mapboxgl.MercatorCoordinate.fromLngLat(modelOrigin, modelAltitude);
 
-    const transform = {
-        translateX: merc.x,
-        translateY: merc.y,
-        translateZ: merc.z,
-        rotateX: rotation[0],
-        rotateY: rotation[1],
-        rotateZ: rotation[2],
-        scale: merc.meterInMercatorCoordinateUnits()
-    };
+const modelTransform = {
+    translateX: modelCoord.x,
+    translateY: modelCoord.y,
+    translateZ: modelCoord.z,
+    rotateX: modelRotate[0],
+    rotateY: modelRotate[1],
+    rotateZ: modelRotate[2],
+    scale: modelCoord.meterInMercatorCoordinateUnits()
+};
 
-    return {
-        id: layerId,
-        type: "custom",
-        renderingMode: "3d",
+// THREE.JS
+let renderer, scene, camera;
+let initialized = false;
 
-        onAdd: function (map, gl) {
-            this.camera = new THREE.Camera();
-            this.scene = new THREE.Scene();
+//loader
+const loader = new GLTFLoader();
+const draco = new DRACOLoader();
+draco.setDecoderPath("https://cdn.jsdelivr.net/npm/three@0.159/examples/jsm/libs/draco/");
+loader.setDRACOLoader(draco);
 
-            const light = new THREE.DirectionalLight(0xffffff);
-            light.position.set(0, -70, 100).normalize();
-            this.scene.add(light);
-
-            const light2 = new THREE.DirectionalLight(0xffffff);
-            light2.position.set(0, 70, 100).normalize();
-            this.scene.add(light2);
-
-            const loader = new THREE.GLTFLoader();
-            loader.load(modelURL, gltf => this.scene.add(gltf.scene));
-
-            this.renderer = new THREE.WebGLRenderer({
-                canvas: map.getCanvas(),
-                context: gl,
-                antialias: true
-            });
-            this.renderer.autoClear = false;
-        },
-
-        render: function (gl, matrix) {
-            const rotX = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(1,0,0), transform.rotateX);
-            const rotY = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(0,1,0), transform.rotateY);
-            const rotZ = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(0,0,1), transform.rotateZ);
-
-            const m = new THREE.Matrix4().fromArray(matrix);
-
-            const l = new THREE.Matrix4()
-                .makeTranslation(transform.translateX, transform.translateY, transform.translateZ)
-                .scale(new THREE.Vector3(transform.scale, -transform.scale, transform.scale))
-                .multiply(rotX).multiply(rotY).multiply(rotZ);
-
-            this.camera.projectionMatrix = m.multiply(l);
-            this.renderer.resetState();
-            this.renderer.render(this.scene, this.camera);
-        }
-    };
+function addModel(url, scale = 1) {
+    return new Promise((resolve, reject) => {
+        loader.load(
+            url,
+            glb => {
+                glb.scene.scale.set(scale, scale, scale);
+                scene.add(glb.scene);
+                resolve(glb.scene);
+            },
+            undefined,
+            reject
+        );
+    });
 }
 
-// ---------------- LOAD ----------------
-map.on("load", () => {
+//3d model layer
+const customLayer = {
+    id: "3d-model-layer",
+    type: "custom",
+    renderingMode: "3d",
 
-    // Add models (REPLACE WITH YOUR GLTF URLs)
-    map.addLayer(makeModelLayer(
-        "forebayModel",
-        "https://YOUR_URL/forebay.gltf",
-        -122.514728, 37.965565
-    ));
+    onAdd: async function (map, gl) {
+        scene = new THREE.Scene();
+        camera = new THREE.Camera();
 
-    map.addLayer(makeModelLayer(
-        "benchModel",
-        "https://YOUR_URL/bench.gltf",
-        -122.512556, 37.967846
-    ));
-
-    map.addLayer(makeModelLayer(
-        "closetModel",
-        "https://YOUR_URL/closet.gltf",
-        -122.511725, 37.967567
-    ));
-
-    // ---- TOGGLES ----
-    function toggleLayer(checkboxId, layerId) {
-        const box = document.getElementById(checkboxId);
-        map.setLayoutProperty(layerId, "visibility", box.checked ? "visible" : "none");
-
-        box.addEventListener("change", () => {
-            map.setLayoutProperty(layerId, "visibility", box.checked ? "visible" : "none");
+        renderer = new THREE.WebGLRenderer({
+            canvas: map.getCanvas(),
+            context: gl,
+            antialias: true
         });
+        renderer.autoClear = false;
+
+        await addModel("assets/models/bench.glb");
+        await addModel("assets/models/closet.glb");
+        await addModel("assets/models/pond_pack.glb");
+
+        initialized = true;
+    },
+
+    render: function (gl, matrix) {
+        if (!initialized) return;
+
+        const rotationX = new THREE.Matrix4().makeRotationAxis(
+            new THREE.Vector3(1, 0, 0), modelTransform.rotateX
+        );
+        const rotationY = new THREE.Matrix4().makeRotationAxis(
+            new THREE.Vector3(0, 1, 0), modelTransform.rotateY
+        );
+        const rotationZ = new THREE.Matrix4().makeRotationAxis(
+            new THREE.Vector3(0, 0, 1), modelTransform.rotateZ
+        );
+
+        const translation = new THREE.Matrix4().makeTranslation(
+            modelTransform.translateX,
+            modelTransform.translateY,
+            modelTransform.translateZ
+        );
+
+        const scale = new THREE.Matrix4().makeScale(
+            modelTransform.scale,
+            -modelTransform.scale,
+            modelTransform.scale
+        );
+
+        const m = new THREE.Matrix4().fromArray(matrix);
+        const l = new THREE.Matrix4()
+            .multiply(rotationX)
+            .multiply(rotationY)
+            .multiply(rotationZ)
+            .multiply(scale)
+            .multiply(translation);
+
+        camera.projectionMatrix = m.multiply(l);
+
+        renderer.resetState();
+        renderer.render(scene, camera);
+        map.triggerRepaint();
     }
+};
 
-    toggleLayer("togglePond", "forebayModel");
-    toggleLayer("toggleBench", "benchModel");
-    toggleLayer("toggleCloset", "closetModel");
-
-    // ---- CAMERA BUTTONS ----
-    document.getElementById("zoomRegion").addEventListener("click", () => {
-        map.flyTo({
-            center: [-122.514522, 37.967155],
-            zoom: 20,
-            pitch: 60
-        });
-    });
-
-    document.getElementById("resetView").addEventListener("click", () => {
-        map.flyTo({
-            center: [-122.514522, 37.967155],
-            zoom: 17,
-            pitch: 60
-        });
-    });
-
+map.on("load", () => {
+    map.addLayer(customLayer);
 });
