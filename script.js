@@ -1,9 +1,7 @@
-// Three.js imports
 import * as THREE from "three";
 import { GLTFLoader } from "https://cdn.jsdelivr.net/npm/three@0.159/examples/jsm/loaders/GLTFLoader.js";
 import { DRACOLoader } from "https://cdn.jsdelivr.net/npm/three@0.159/examples/jsm/loaders/DRACOLoader.js";
 
-// Mapbox access token and map setup
 mapboxgl.accessToken = "pk.eyJ1Ijoic25iZW5vaSIsImEiOiJjbWg5Y2IweTAwbnRzMm5xMXZrNnFnbmY5In0.Lza9yPTlMhbHE5zHNRb1aA";
 
 const targetCenter = [-122.514522, 37.967155];
@@ -22,7 +20,6 @@ map.on("error", (e) => console.error("MAPBOX ERROR:", e.error));
 
 let renderer, scene, camera;
 
-// Three.js loaders
 const loader = new GLTFLoader();
 const draco = new DRACOLoader();
 draco.setDecoderPath(
@@ -30,7 +27,6 @@ draco.setDecoderPath(
 );
 loader.setDRACOLoader(draco);
 
-// Model positions
 const benchOrigin = [-122.512606, 37.967814];
 const pondOrigin = [-122.5144361, 37.96595];
 const closetOrigin = [-122.513856, 37.967939];
@@ -71,7 +67,6 @@ async function loadModel(url, scale = 200) {
 
 let benchModel, pondModel, closetModel;
 
-// Custom 3D layer
 const customLayer = {
   id: "3d-model-layer",
   type: "custom",
@@ -146,13 +141,59 @@ const customLayer = {
 
 map.on("load", () => {
   map.addLayer(customLayer);
+
+  map.addSource("srcd-points", {
+    type: "geojson",
+    data: "data/619data.geojson"
+  });
+
+  map.addLayer({
+    id: "srcd-points-layer",
+    type: "circle",
+    source: "srcd-points",
+    paint: {
+      "circle-radius": 6,
+      "circle-color": "#e63946",
+      "circle-stroke-color": "#ffffff",
+      "circle-stroke-width": 1.5
+    }
+  });
+
+  map.on("mouseenter", "srcd-points-layer", () => {
+    map.getCanvas().style.cursor = "pointer";
+  });
+
+  map.on("mouseleave", "srcd-points-layer", () => {
+    map.getCanvas().style.cursor = "";
+  });
+
+  map.on("click", "srcd-points-layer", (e) => {
+    if (!e.features || !e.features.length) return;
+    const feature = e.features[0];
+
+    const props = feature.properties || {};
+    const name = props.name || props.Title || "Point";
+    const desc =
+      props.description ||
+      props.Description ||
+      props.notes ||
+      "";
+
+    const coordinates = feature.geometry.coordinates.slice();
+
+    new mapboxgl.Popup({ offset: 12 })
+      .setLngLat(coordinates)
+      .setHTML(
+        `<strong>${name}</strong>${desc ? "<br>" + desc : ""}`
+      )
+      .addTo(map);
+  });
 });
 
-// UI controls
 document.getElementById("zoomRegion").addEventListener("click", () => {
   map.flyTo({
     center: targetCenter,
-    zoom: 12,
+    zoom: 14,
     speed: 0.6
   });
 });
