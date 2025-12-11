@@ -56,14 +56,19 @@ async function loadModel(url, scale = 200) {
     loader.load(
       url,
       (gltf) => {
+        console.log("Loaded model:", url);
         gltf.scene.scale.set(scale, scale, scale);
         resolve(gltf.scene);
       },
       undefined,
-      reject
+      (err) => {
+        console.error("Error loading model:", url, err);
+        reject(err);
+      }
     );
   });
 }
+
 
 let benchModel, pondModel, closetModel;
 
