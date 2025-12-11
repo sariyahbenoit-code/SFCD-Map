@@ -1,18 +1,12 @@
-// ================================
-// GLOBAL SCALE MULTIPLIER FOR GLB MODELS
-// ================================
-const MODEL_SIZE_MULTIPLIER = 0.2; // change this to scale all .glb models
+const MODEL_SIZE_MULTIPLIER = 0.2;
 
-// ================================
-// MAP INITIALIZATION (UNCHANGED)
-// ================================
 mapboxgl.accessToken =
     "pk.eyJ1Ijoic25iZW5vaSIsImEiOiJjbWg5Y2IweTAwbnRzMm5xHNRb1aA";
 
 const map = new mapboxgl.Map({
     container: "map",
     style: "mapbox://styles/mapbox/standard",
-    config: { basemap: { theme: "monochrome" }},
+    config: { basemap: { theme: "monochrome" } },
     zoom: 18,
     center: [-122.514522, 37.967155],
     pitch: 60,
@@ -34,11 +28,7 @@ function sameCoord(a, b, tol = 1e-6) {
     return Math.abs(a[0] - b[0]) < tol && Math.abs(a[1] - b[1]) < tol;
 }
 
-// ================================
-// MAIN ENTRY: style.load
-// ================================
 map.on("style.load", async () => {
-
     add3DBuildings();
 
     const resp = await fetch(pointsURL);
@@ -47,11 +37,9 @@ map.on("style.load", async () => {
     addModelsFromGeoJSON(geojson);
     addPointsLayer(geojson);
     setupToggles();
+    setupPointClicks();
 });
 
-// ================================
-// 3D BUILDINGS
-// ================================
 function add3DBuildings() {
     try {
         map.addSource("composite", {
@@ -69,14 +57,22 @@ function add3DBuildings() {
             paint: {
                 "fill-extrusion-color": "#aaa",
                 "fill-extrusion-height": [
-                    "interpolate", ["linear"], ["zoom"],
-                    15, 0,
-                    15.05, ["get", "height"]
+                    "interpolate",
+                    ["linear"],
+                    ["zoom"],
+                    15,
+                    0,
+                    15.05,
+                    ["get", "height"]
                 ],
                 "fill-extrusion-base": [
-                    "interpolate", ["linear"], ["zoom"],
-                    15, 0,
-                    15.05, ["get", "min_height"]
+                    "interpolate",
+                    ["linear"],
+                    ["zoom"],
+                    15,
+                    0,
+                    15.05,
+                    ["get", "min_height"]
                 ],
                 "fill-extrusion-opacity": 0.6
             }
@@ -84,11 +80,7 @@ function add3DBuildings() {
     } catch (err) {}
 }
 
-// ================================
-// ADD MODELS — with scale multiplier
-// ================================
 async function addModelsFromGeoJSON(geojson) {
-
     const known = {
         pond: [-122.51472840835794, 37.96556501819977],
         bench: [-122.51255653080607, 37.96784675899259],
@@ -137,7 +129,7 @@ async function addModelsFromGeoJSON(geojson) {
                     model.rotation.x = Math.PI / 2;
                     model.position.set(0, 0, 0);
 
-                    loadedModels[key] = { mesh: model, layerId };
+                    loadedModels[key] = { mesh: model, layerId, coords, properties: feature.properties };
                     this.scene.add(model);
                 });
 
@@ -151,8 +143,7 @@ async function addModelsFromGeoJSON(geojson) {
 
             render: function (gl, matrix) {
                 const m = new THREE.Matrix4().fromArray(matrix);
-                const trans = new THREE.Matrix4()
-                    .makeTranslation(mc.x, mc.y, mc.z);
+                const trans = new THREE.Matrix4().makeTranslation(mc.x, mc.y, mc.z);
 
                 this.camera.projectionMatrix = m.multiply(trans);
 
@@ -166,49 +157,77 @@ async function addModelsFromGeoJSON(geojson) {
     }
 }
 
-// ================================
-// POINTS LAYER
-// ================================
 function addPointsLayer(geojson) {
     if (!map.getSource("points")) {
         map.addSource("points", { type: "geojson", data: geojson });
     }
 
-    map.addLayer({
-        id: "point-circles",
-        type: "circle",
-        source: "points",
-        paint: {
-            "circle-radius": 8,
-            "circle-color": "#ff5500",
-            "circle-stroke-width": 2,
-            "circle-stroke-color": "#ffffff"
+    if (!map.getLayer("point-circles")) {
+        map.addLayer({
+            id: "point-circles",
+            type: "circle",
+            source: "points",
+            paint: {
+                "circle-radius": 8,
+                "circle-color": "#ff5500",
+                "circle-stroke-width": 2,
+                "circle-stroke-color": "#ffffff"
+            }
+        });
+    }
+}
+
+function setupPointClicks() {
+    map.on("click", "point-circles", (e) => {
+        const feature = e.features && e.features[0];
+        if (!feature) return;
+
+        const coordinates = feature.geometry.coordinates.slice();
+        const props = feature.properties || {};
+
+        const title = props.name || props.title || "SRCD Project Element";
+        const description = props.description || props.notes || "";
+        const img = props.image || props.img || "";
+
+        let html = `<h3>${title}</h3>`;
+        if (description) {
+            html += `<p>${description}</p>`;
         }
+        if (img) {
+            html += `<img src="${img}" style="max-width:200px;display:block;margin-top:6px;" />`;
+        }
+
+        new mapboxgl.Popup()
+            .setLngLat(coordinates)
+            .setHTML(html)
+            .addTo(map);
+    });
+
+    map.on("mouseenter", "point-circles", () => {
+        map.getCanvas().style.cursor = "pointer";
+    });
+
+    map.on("mouseleave", "point-circles", () => {
+        map.getCanvas().style.cursor = "";
     });
 }
 
-// ================================
-// CHECKBOX TOGGLES
-// ================================
 function setupToggles() {
     const pondBox = document.getElementById("togglePond");
     const benchBox = document.getElementById("toggleBench");
     const closetBox = document.getElementById("toggleCloset");
 
-    pondBox.onchange = e => {
+    pondBox.onchange = (e) => {
         if (loadedModels.pond) loadedModels.pond.mesh.visible = e.target.checked;
     };
-    benchBox.onchange = e => {
+    benchBox.onchange = (e) => {
         if (loadedModels.bench) loadedModels.bench.mesh.visible = e.target.checked;
     };
-    closetBox.onchange = e => {
+    closetBox.onchange = (e) => {
         if (loadedModels.closet) loadedModels.closet.mesh.visible = e.target.checked;
     };
 }
 
-// ================================
-// BUTTONS (UNCHANGED)
-// ================================
 document.getElementById("zoomRegion").onclick = () =>
     map.flyTo({
         center: [-122.514522, 37.967155],
