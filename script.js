@@ -1,4 +1,3 @@
-
 // map set up
 
 mapboxgl.accessToken = 'pk.eyJ1Ijoic25iZW5vaSIsImEiOiJjbWg5Y2IweTAwbnRzMm5xMXZrNnFnbmY5In0.Lza9yPTlMhbHE5zHNRb1aA';
@@ -35,8 +34,26 @@ const modelTransform = {
 let renderer, scene, camera;
 let initialized = false;
 
+let pondModel, benchModel, closetModel;
+
 //loader
 const loader = new GLTFLoader();
+
+async function addModel(url, scale = 1) {
+    return new Promise((resolve, reject) => {
+        loader.load(
+            url,
+            glb => {
+                glb.scene.scale.set(scale, scale, scale);
+                scene.add(glb.scene);
+                resolve(glb.scene);
+            },
+            undefined,
+            reject
+        );
+    });
+}
+
 const draco = new DRACOLoader();
 draco.setDecoderPath("https://cdn.jsdelivr.net/npm/three@0.159/examples/jsm/libs/draco/");
 loader.setDRACOLoader(draco);
@@ -73,9 +90,9 @@ const customLayer = {
         });
         renderer.autoClear = false;
 
-        await addModel("assets/models/bench.glb");
-        await addModel("assets/models/closet.glb");
-        await addModel("assets/models/pond_pack.glb");
+         benchModel = await addModel("assets/models/bench.glb");
+        closetModel = await addModel("assets/models/closet.glb");
+        pondModel = await addModel("assets/models/pond_pack.glb");
 
         initialized = true;
     },
@@ -117,6 +134,156 @@ const customLayer = {
 
         renderer.resetState();
         renderer.render(scene, camera);
+        map.triggerRepaint();
+    }
+};
+
+map.on("load", () => {
+    map.addLayer(customLayer);
+});
+
+// REQUIRED — your target center point
+const targetCenter = [-122.514522, 37.967155];
+
+// Button: Zoom to SRCD region (zoom 12)
+document.getElementById("zoomRegion").addEventListener("click", () => {
+    map.flyTo({
+        center: targetCenter,
+        zoom: 12,
+        speed: 0.6
+    });
+});
+
+// Button: Reset view (zoom 16)
+document.getElementById("resetView").addEventListener("click", () => {
+    map.flyTo({
+        center: targetCenter,
+        zoom: 16,
+        speed: 0.6
+    });
+});
+
+// Checkboxes — add your show/hide logic here
+document.getElementById("togglePond").addEventListener("change", (e) => {
+    // example:
+    // map.setLayoutProperty("pond-layer", "visibility", e.target.checked ? "visible" : "none");
+    console.log("togglePond:", e.target.checked);
+});
+
+document.getElementById("toggleBench").addEventListener("change", (e) => {
+    console.log("toggle Bench:", e.target.checked);
+});
+
+document.getElementById("toggleCloset").addEventListener("change", (e) => {
+    console.log("toggle Closet:", e.target.checked);
+});
+
+// ------------------------------
+// MODEL COORDINATES
+// ------------------------------
+
+const benchOrigin  = [-122.512606, 37.967814];
+const pondOrigin   = [-122.5144361, 37.96595];    // fixed negative sign
+const closetOrigin = [-122.513856, 37.967939];
+
+const modelAltitude = 0; 
+const modelRotate = [Math.PI / 2, 0, 0];
+
+// convert each origin to Mercator space
+function makeTransform(origin) {
+    const mc = mapboxgl.MercatorCoordinate.fromLngLat(origin, modelAltitude);
+    return {
+        translateX: mc.x,
+        translateY: mc.y,
+        translateZ: mc.z,
+        rotateX: modelRotate[0],
+        rotateY: modelRotate[1],
+        rotateZ: modelRotate[2],
+        scale: mc.meterInMercatorCoordinateUnits()
+    };
+}
+
+const benchTransform  = makeTransform(benchOrigin);
+const pondTransform   = makeTransform(pondOrigin);
+const closetTransform = makeTransform(closetOrigin);
+
+// ------------------------------
+// LOAD MODELS
+// ------------------------------
+
+let benchModel, pondModel, closetModel;
+
+async function loadModel(url, scale = 200) {
+    return new Promise((resolve, reject) => {
+        loader.load(
+            url,
+            glb => {
+                glb.scene.scale.set(scale, scale, scale);
+                resolve(glb.scene);
+            },
+            undefined,
+            reject
+        );
+    });
+}
+
+const customLayer = {
+    id: "3d-model-layer",
+    type: "custom",
+    renderingMode: "3d",
+
+    onAdd: async function (map, gl) {
+        scene = new THREE.Scene();
+        camera = new THREE.Camera();
+
+        renderer = new THREE.WebGLRenderer({
+            canvas: map.getCanvas(),
+            context: gl,
+            antialias: true
+        });
+        renderer.autoClear = false;
+
+        // Load each model
+        benchModel  = await loadModel("assets/models/bench.glb");
+        pondModel   = await loadModel("assets/models/pond_pack.glb");
+        closetModel = await loadModel("assets/models/closet.glb");
+
+        scene.add(benchModel);
+        scene.add(pondModel);
+        scene.add(closetModel);
+    },
+
+    render: function (gl, matrix) {
+        if (!benchModel) return;
+
+        renderer.resetState();
+
+        // helper function to render each model with its own transform
+        function renderModel(obj, t) {
+            const rotX = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(1,0,0), t.rotateX);
+            const rotY = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(0,1,0), t.rotateY);
+            const rotZ = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(0,0,1), t.rotateZ);
+
+            const translation = new THREE.Matrix4().makeTranslation(t.translateX, t.translateY, t.translateZ);
+            const scale = new THREE.Matrix4().makeScale(t.scale, -t.scale, t.scale);
+
+            const m = new THREE.Matrix4().fromArray(matrix);
+            const l = new THREE.Matrix4()
+                .multiply(rotX)
+                .multiply(rotY)
+                .multiply(rotZ)
+                .multiply(scale)
+                .multiply(translation);
+
+            camera.projectionMatrix = m.multiply(l);
+
+            renderer.render(scene, camera);
+        }
+
+        renderModel(benchModel, benchTransform);
+        renderModel(pondModel, pondTransform);
+        renderModel(closetModel, closetTransform);
+
         map.triggerRepaint();
     }
 };
