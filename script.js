@@ -81,7 +81,7 @@ const imagePoints = {
   ]
 };
 
-// Create the map
+// Create the map with Standard style
 const map = new mapboxgl.Map({
   container: "map",
   style: "mapbox://styles/mapbox/standard",
@@ -90,6 +90,12 @@ const map = new mapboxgl.Map({
   pitch: 60,
   bearing: 0,
   antialias: true
+});
+
+// Apply the monochrome theme once the style is loaded
+map.on("style.load", () => {
+  // This matches the Standard config pattern from the example you referenced
+  map.setConfigProperty("basemap", "theme", "monochrome");
 });
 
 map.on("error", (e) => console.error("MAPBOX ERROR:", e.error));
@@ -325,7 +331,35 @@ map.on("load", () => {
     map.getCanvas().style.cursor = "";
   });
 
-  // Region zoom buttons
+  // 5. Add your polygon GeoJSON as a source
+  map.addSource("srcd-polygons", {
+    type: "geojson",
+    data: "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/data/619data.geojson"
+  });
+
+  // 6. Add a fill layer for polygons
+  map.addLayer({
+    id: "srcd-polygons-fill",
+    type: "fill",
+    source: "srcd-polygons",
+    paint: {
+      "fill-color": "#00aaff",
+      "fill-opacity": 0.35
+    }
+  });
+
+  // Optional outline on polygons
+  map.addLayer({
+    id: "srcd-polygons-outline",
+    type: "line",
+    source: "srcd-polygons",
+    paint: {
+      "line-color": "#0077aa",
+      "line-width": 2
+    }
+  });
+
+  // 7. Region zoom buttons
   const regionBounds = [
     [-122.5155, 37.9645], // SW
     [-122.5115, 37.9695]  // NE
@@ -351,7 +385,7 @@ map.on("load", () => {
     });
   }
 
-  // Checkbox toggles
+  // 8. Checkbox toggles
   const pondCheckbox = document.getElementById("togglePond");
   const benchCheckbox = document.getElementById("toggleBench");
   const closetCheckbox = document.getElementById("toggleCloset");
