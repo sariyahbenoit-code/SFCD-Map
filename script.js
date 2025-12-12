@@ -14,7 +14,7 @@ const map = new mapboxgl.Map({
   center: targetCenter,
   zoom: 17,
   pitch: 60,
-  antialias: true,
+  antialias: true
 });
 
 map.on("error", (e) => console.error("MAPBOX ERROR:", e.error));
@@ -28,15 +28,9 @@ draco.setDecoderPath(
 );
 loader.setDRACOLoader(draco);
 
-// USE THE GEOJSON POINT COORDINATES AS MODEL ORIGINS
-
-// pond pack at [-122.51472840835794, 37.96556501819977]
+// MODEL ORIGINS
 const pondOrigin = [-122.51472840835794, 37.96556501819977];
-
-// bench at [-122.51255653080607, 37.96784675899259]
 const benchOrigin = [-122.51255653080607, 37.96784675899259];
-
-// closet at [-122.5143025251341, 37.96791673783633]
 const closetOrigin = [-122.5143025251341, 37.96791673783633];
 
 const modelAltitude = 0;
@@ -51,7 +45,7 @@ function makeTransform(origin) {
     rotateX: modelRotate[0],
     rotateY: modelRotate[1],
     rotateZ: modelRotate[2],
-    scale: mc.meterInMercatorCoordinateUnits(),
+    scale: mc.meterInMercatorCoordinateUnits()
   };
 }
 
@@ -59,12 +53,18 @@ const benchTransform = makeTransform(benchOrigin);
 const pondTransform = makeTransform(pondOrigin);
 const closetTransform = makeTransform(closetOrigin);
 
-async function loadModel(url, scale = 500) {
+async function loadModel(url, scale = 1) {
   return new Promise((resolve, reject) => {
     loader.load(
       url,
       (gltf) => {
         console.log("Loaded model:", url);
+        gltf.scene.traverse((obj) => {
+          if (obj.isMesh) {
+            obj.castShadow = false;
+            obj.receiveShadow = false;
+          }
+        });
         gltf.scene.scale.set(scale, scale, scale);
         resolve(gltf.scene);
       },
@@ -91,16 +91,24 @@ const customLayer = {
     scene = new THREE.Scene();
     camera = new THREE.Camera();
 
+    const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+    scene.add(ambient);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+    dirLight.position.set(0, 100, 100);
+    scene.add(dirLight);
+
     renderer = new THREE.WebGLRenderer({
       canvas: map.getCanvas(),
       context: gl,
-      antialias: true,
+      antialias: true
     });
     renderer.autoClear = false;
 
     try {
       benchModel = await loadModel(
-        "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/models/bench.glb"
+        "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/models/bench.glb",
+        1
       );
       scene.add(benchModel);
     } catch (e) {
@@ -109,7 +117,8 @@ const customLayer = {
 
     try {
       pondModel = await loadModel(
-        "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/models/pond_pack.glb"
+        "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/models/pond_pack.glb",
+        1
       );
       scene.add(pondModel);
     } catch (e) {
@@ -118,7 +127,8 @@ const customLayer = {
 
     try {
       closetModel = await loadModel(
-        "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/models/closet.glb"
+        "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/models/closet.glb",
+        1
       );
       scene.add(closetModel);
     } catch (e) {
@@ -127,12 +137,19 @@ const customLayer = {
   },
 
   render: (gl, matrix) => {
-    if (!pondModel && !closetModel && !benchModel) return;
+    if (!renderer || (!pondModel && !closetModel && !benchModel)) return;
 
-    renderer.resetState();
+    // Sync camera with Mapbox
+    camera.projectionMatrix = new THREE.Matrix4().fromArray(matrix);
 
-    function renderModel(obj, t) {
+    renderer.state.reset();
+    renderer.autoClear = false;
+    renderer.clearDepth();
+
+    function applyTransform(obj, t) {
       if (!obj) return;
+
+      obj.matrixAutoUpdate = false;
 
       const rotX = new THREE.Matrix4().makeRotationAxis(
         new THREE.Vector3(1, 0, 0),
@@ -153,28 +170,28 @@ const customLayer = {
         t.translateZ
       );
 
-      // Boost scale so models are visible; tune 50 up/down as needed
-      const s = t.scale * 50;
-      const scale = new THREE.Matrix4().makeScale(s, -s, s);
+      const s = t.scale * 5; //increase or descrease ***!!!! SARIYAH COME BACK TO THIS
+      const scale = new THREE.Matrix4().makeScale(s, s, s);
 
-      const m = new THREE.Matrix4().fromArray(matrix);
-      const l = new THREE.Matrix4()
+      obj.matrix = new THREE.Matrix4()
         .multiply(rotX)
         .multiply(rotY)
         .multiply(rotZ)
         .multiply(scale)
         .multiply(translation);
-
-      camera.projectionMatrix = m.multiply(l);
-      renderer.render(scene, camera);
     }
 
-    if (showBench) renderModel(benchModel, benchTransform);
-    if (showPond) renderModel(pondModel, pondTransform);
-    if (showCloset) renderModel(closetModel, closetTransform);
+    applyTransform(benchModel, benchTransform);
+    applyTransform(pondModel, pondTransform);
+    applyTransform(closetModel, closetTransform);
 
+    if (benchModel) benchModel.visible = showBench;
+    if (pondModel) pondModel.visible = showPond;
+    if (closetModel) closetModel.visible = showCloset;
+
+    renderer.render(scene, camera);
     map.triggerRepaint();
-  },
+  }
 };
 
 map.on("load", () => {
@@ -182,7 +199,7 @@ map.on("load", () => {
 
   map.addSource("srcd-data", {
     type: "geojson",
-    data: "data/619data.geojson",
+    data: "data/619data.geojson"
   });
 
   map.addLayer({
@@ -191,9 +208,9 @@ map.on("load", () => {
     source: "srcd-data",
     paint: {
       "fill-color": "#256634",
-      "fill-opacity": 0.2,
+      "fill-opacity": 0.2
     },
-    filter: ["==", ["geometry-type"], "Polygon"],
+    filter: ["==", ["geometry-type"], "Polygon"]
   });
 
   map.addLayer({
@@ -202,9 +219,9 @@ map.on("load", () => {
     source: "srcd-data",
     paint: {
       "line-color": "#354739",
-      "line-width": 2,
+      "line-width": 2
     },
-    filter: ["==", ["geometry-type"], "Polygon"],
+    filter: ["==", ["geometry-type"], "Polygon"]
   });
 
   map.addLayer({
@@ -213,12 +230,11 @@ map.on("load", () => {
     source: "srcd-data",
     paint: {
       "line-color": "#E8240C",
-      "line-width": 3,
+      "line-width": 3
     },
-    filter: ["==", ["geometry-type"], "LineString"],
+    filter: ["==", ["geometry-type"], "LineString"]
   });
 
-  // Only the 3 point features as circles
   map.addLayer({
     id: "srcd-points-layer",
     type: "circle",
@@ -227,9 +243,9 @@ map.on("load", () => {
       "circle-radius": 6,
       "circle-color": "#E4E80C",
       "circle-stroke-color": "#000000",
-      "circle-stroke-width": 1,
+      "circle-stroke-width": 1
     },
-    filter: ["==", ["geometry-type"], "Point"],
+    filter: ["==", ["geometry-type"], "Point"]
   });
 
   map.on("mouseenter", "srcd-points-layer", () => {
@@ -258,13 +274,12 @@ map.on("load", () => {
 
     const coordinates = feature.geometry.coordinates.slice();
 
-    // Recenter map on clicked point
     map.flyTo({
       center: coordinates,
       zoom: map.getZoom(),
       pitch: map.getPitch(),
       bearing: map.getBearing(),
-      speed: 0.6,
+      speed: 0.6
     });
 
     let html = `<strong>${landmark}</strong>`;
@@ -310,12 +325,13 @@ map.on("load", () => {
         html +=
           '<br><br>' +
           '<a href="' + popupMedia + '" target="_blank" style="display:inline-block; width: 100%; text-align:center;">' +
-            '<img src="' + popupMedia + '" alt="Popup media" ' +
-            'style="display:inline-block; width: 60%; height: auto; max-width: 60%;">' +
-          '</a>';
+          '<img src="' + popupMedia + '" alt="Popup media" ' +
+          'style="display:inline-block; width: 60%; height: auto; max-width: 60%;">' +
+          "</a>";
       } else {
         html +=
-          '<br><br><a href="' + popupMedia +
+          '<br><br><a href="' +
+          popupMedia +
           '" target="_blank"><strong>Open attached media</strong></a>';
       }
     }
@@ -323,7 +339,7 @@ map.on("load", () => {
     new mapboxgl.Popup({
       offset: [0, -40],
       anchor: "bottom",
-      closeOnMove: false,
+      closeOnMove: false
     })
       .setLngLat(coordinates)
       .setHTML(html)
@@ -335,7 +351,7 @@ document.getElementById("zoomRegion").addEventListener("click", () => {
   map.flyTo({
     center: targetCenter,
     zoom: 14,
-    speed: 0.6,
+    speed: 0.6
   });
 });
 
@@ -343,7 +359,7 @@ document.getElementById("resetView").addEventListener("click", () => {
   map.flyTo({
     center: targetCenter,
     zoom: 16,
-    speed: 0.6,
+    speed: 0.6
   });
 });
 
