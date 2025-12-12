@@ -248,7 +248,7 @@ map.on("load", () => {
 
     const coordinates = feature.geometry.coordinates.slice();
 
-    // Recenter map on clicked point so popup appears near viewport center
+    // Recenter map on clicked point so popup is around the feature
     map.flyTo({
       center: coordinates,
       zoom: map.getZoom(),
@@ -311,7 +311,7 @@ map.on("load", () => {
     }
 
     new mapboxgl.Popup({
-      offset: [0, -200],   
+      offset: [0, -40],  // small negative Y so popup sits just above the point
       anchor: "bottom",
       closeOnMove: false,
     })
