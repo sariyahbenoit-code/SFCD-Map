@@ -28,7 +28,7 @@ draco.setDecoderPath(
 );
 loader.setDRACOLoader(draco);
 
-// MODEL ORIGINS (must match your key points)
+// MODEL ORIGINS
 const pondOrigin = [-122.51472840835794, 37.96556501819977];
 const benchOrigin = [-122.51255653080607, 37.96784675899259];
 const closetOrigin = [-122.5143025251341, 37.96791673783633];
@@ -169,7 +169,7 @@ const customLayer = {
         t.translateZ
       );
 
-      const s = t.scale * 5; // adjust to change model size
+      const s = t.scale * 5;
       const scale = new THREE.Matrix4().makeScale(s, s, s);
 
       obj.matrix = new THREE.Matrix4()
@@ -234,7 +234,6 @@ map.on("load", () => {
     filter: ["==", ["geometry-type"], "LineString"]
   });
 
-  // Shows only features whose geometry.type === "Point"
   map.addLayer({
     id: "srcd-points-layer",
     type: "circle",
@@ -256,98 +255,54 @@ map.on("load", () => {
     map.getCanvas().style.cursor = "";
   });
 
+  // DIAGNOSTIC CLICK HANDLER - shows exactly what's wrong
   map.on("click", "srcd-points-layer", (e) => {
     if (!e.features || !e.features.length) return;
     const feature = e.features[0];
     const props = feature.properties || {};
 
     const landmark = props["Landmark"] || "Landmark";
-    const address = props["Address"] || "";
-    const proposal = props["Proposal"] || "";
-    const proposalLink = props["Proposal Link"] || "";
-    const existingLink = props["Existing Link"] || "";
-    const precedent1 = props["Precedent1"] || "";
-    const precedent2 = props["Precedent2"] || "";
-    const extras1 = props["Extras1"] || "";
-    const extras2 = props["Extras 2"] || "";
-    let popupMedia = props["PopupMedia"] || "";
-    const repoImage = props["RepoImage"] || "";
+    const popupMedia = props["PopupMedia"] || "";
+    
+    // DIAGNOSTIC LOGS
+    console.log("🔍 DEBUG - Landmark:", landmark);
+    console.log("🔍 DEBUG - Raw PopupMedia:", popupMedia);
+    console.log("🔍 DEBUG - PopupMedia length:", popupMedia.length);
+    console.log("🔍 DEBUG - Full feature props:", props);
 
     const coordinates = feature.geometry.coordinates.slice();
 
-    map.flyTo({
-      center: coordinates,
-      zoom: map.getZoom(),
-      pitch: map.getPitch(),
-      bearing: map.getBearing(),
-      speed: 0.6
-    });
+    let html = `<strong>${landmark}</strong><br><br>`;
+    
+    // DIAGNOSTIC DISPLAY
+    html += `<small>DEBUG: "${popupMedia.substring(0, 50)}..." (${popupMedia.length} chars)</small><br><br>`;
 
-    let html = `<strong>${landmark}</strong>`;
-    if (address) html += `<br>${address}`;
-    if (proposal) html += `<br><br><strong>Proposal:</strong> ${proposal}`;
-
-    const links = [];
-    if (proposalLink)
-      links.push(
-        `<a href="${proposalLink}" target="_blank">Proposal image</a>`
-      );
-    if (existingLink)
-      links.push(
-        `<a href="${existingLink}" target="_blank">Existing condition</a>`
-      );
-    if (precedent1)
-      links.push(
-        `<a href="${precedent1}" target="_blank">Precedent 1</a>`
-      );
-    if (precedent2)
-      links.push(
-        `<a href="${precedent2}" target="_blank">Precedent 2</a>`
-      );
-    if (extras1)
-      links.push(`<a href="${extras1}" target="_blank">Extra 1</a>`);
-    if (extras2)
-      links.push(`<a href="${extras2}" target="_blank">Extra 2</a>`);
-    if (repoImage)
-      links.push(
-        `<a href="${repoImage}" target="_blank">Repository image</a>`
-      );
-
-    if (links.length) {
-      html += "<br><br><strong>Links:</strong><br>" + links.join("<br>");
-    }
-
-    // Normalize PopupMedia: if it looks like a GitHub blob URL, convert to raw
-    if (popupMedia.includes("github.com") && popupMedia.includes("/blob/")) {
-      popupMedia = popupMedia
+    // Clean up the URL
+    let cleanMedia = popupMedia.trim();
+    if (cleanMedia.includes("github.com") && cleanMedia.includes("/blob/")) {
+      cleanMedia = cleanMedia
+        .replace(/\[.*?\]\(.*?\)/g, "")
         .replace("https://github.com/", "https://raw.githubusercontent.com/")
-        .replace("/blob/", "/");
+        .replace("/blob/", "/")
+        .trim();
     }
 
-    if (popupMedia) {
-      const url = popupMedia.split("?")[0].split("#")[0];
-      const lower = url.toLowerCase();
+    console.log("🔍 DEBUG - Cleaned PopupMedia:", cleanMedia);
 
-      const isImage =
-        lower.endsWith(".jpg") ||
-        lower.endsWith(".jpeg") ||
-        lower.endsWith(".png") ||
-        lower.endsWith(".gif") ||
-        lower.endsWith(".webp");
-
-      if (isImage) {
-        html +=
-          "<br><br>" +
-          '<a href="' + popupMedia + '" target="_blank" style="display:inline-block; width: 100%; text-align:center;">' +
-          '<img src="' + popupMedia + '" alt="Popup media" ' +
-          'style="display:inline-block; width: 60%; height: auto; max-width: 60%;">' +
-          "</a>";
-      } else {
-        html +=
-          '<br><br><a href="' +
-          popupMedia +
-          '" target="_blank"><strong>Open attached media</strong></a>';
-      }
+    if (cleanMedia && cleanMedia.includes("raw.githubusercontent.com")) {
+      html += `
+        <div style="text-align:center;">
+          <img src="${cleanMedia}" 
+               alt="Project image" 
+               style="width: 80%; height: auto; max-width: 300px; border-radius: 4px;"
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+          <div style="display:none; color: red;">❌ Image failed to load: ${cleanMedia}</div>
+        </div>
+      `;
+    } else if (cleanMedia) {
+      html += `<a href="${cleanMedia}" target="_blank">📎 Open media</a>`;
+    } else {
+      html += "<em>❌ No PopupMedia found</em>";
     }
 
     new mapboxgl.Popup({
@@ -369,4 +324,28 @@ document.getElementById("zoomRegion").addEventListener("click", () => {
   });
 });
 
-document.getElementById("resetView").addEvent
+document.getElementById("resetView").addEventListener("click", () => {
+  map.flyTo({
+    center: targetCenter,
+    zoom: 16,
+    speed: 0.6
+  });
+});
+
+document.getElementById("togglePond").addEventListener("change", (e) => {
+  showPond = e.target.checked;
+  console.log("togglePond:", e.target.checked);
+  map.triggerRepaint();
+});
+
+document.getElementById("toggleBench").addEventListener("change", (e) => {
+  showBench = e.target.checked;
+  console.log("toggle Bench:", e.target.checked);
+  map.triggerRepaint();
+});
+
+document.getElementById("toggleCloset").addEventListener("change", (e) => {
+  showCloset = e.target.checked;
+  console.log("toggle Closet:", e.target.checked);
+  map.triggerRepaint();
+});
