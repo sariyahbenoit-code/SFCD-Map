@@ -121,20 +121,16 @@ const customLayer = {
     }
   },
 
-  render: (gl, matrix) => {
-  if (!pondModel && !closetModel && !benchModel) return;
+    render: (gl, matrix) => {
+    if (!pondModel && !closetModel && !benchModel) return;
 
-  // Debug: log once
-  if (!window._3dLogged) {
-    console.log("benchModel:", benchModel);
-    console.log("pondModel:", pondModel);
-    console.log("closetModel:", closetModel);
-    window._3dLogged = true;
-  }
-
-  renderer.resetState();
-  // ... rest of renderModel and calls ...
-}
+    // Debug: log once
+    if (!window._3dLogged) {
+      console.log("benchModel:", benchModel);
+      console.log("pondModel:", pondModel);
+      console.log("closetModel:", closetModel);
+      window._3dLogged = true;
+    }
 
     renderer.resetState();
 
@@ -180,7 +176,7 @@ const customLayer = {
 
     map.triggerRepaint();
   },
-};
+
 
 // Keep your existing map.on("load", ...) that calls map.addLayer(customLayer)
 
