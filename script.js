@@ -145,7 +145,10 @@ const customLayer = {
         t.translateY,
         t.translateZ
       );
-      const scale = new THREE.Matrix4().makeScale(t.scale, -t.scale, t.scale);
+
+      // BOOST SCALE HERE (×50 for visibility; tune as needed)
+      const s = t.scale * 50;
+      const scale = new THREE.Matrix4().makeScale(s, -s, s);
 
       const m = new THREE.Matrix4().fromArray(matrix);
       const l = new THREE.Matrix4()
@@ -208,7 +211,6 @@ map.on("load", () => {
     filter: ["==", ["geometry-type"], "LineString"],
   });
 
-  // Only the 3 point features as circles
   map.addLayer({
     id: "srcd-points-layer",
     type: "circle",
@@ -248,7 +250,6 @@ map.on("load", () => {
 
     const coordinates = feature.geometry.coordinates.slice();
 
-    // Recenter map on clicked point so popup is around the feature
     map.flyTo({
       center: coordinates,
       zoom: map.getZoom(),
@@ -299,9 +300,9 @@ map.on("load", () => {
       if (isImage) {
         html +=
           '<br><br>' +
-          '<a href="' + popupMedia + '" target="_blank" style="display:inline-block; width: 60%;">' +
+          '<a href="' + popupMedia + '" target="_blank" style="display:inline-block; width: 100%; text-align:center;">' +
             '<img src="' + popupMedia + '" alt="Popup media" ' +
-            'style="display:block; width: 60%; height: auto; min-width: 600px; max-width: 60%;">' +
+            'style="display:inline-block; width: 60%; height: auto; max-width: 60%;">' +
           '</a>';
       } else {
         html +=
@@ -311,7 +312,7 @@ map.on("load", () => {
     }
 
     new mapboxgl.Popup({
-      offset: [0, -40],  // small negative Y so popup sits just above the point
+      offset: [0, -40],
       anchor: "bottom",
       closeOnMove: false,
     })
