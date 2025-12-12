@@ -299,7 +299,7 @@ map.on("load", () => {
       if (isImage) {
         html +=
           '<br><br>' +
-          '<a href="' + popupMedia + '" target="_blank" style="display:inline-block; width: 100%;">' +
+          '<a href="' + popupMedia + '" target="_blank" style="display:inline-block; width: 60%;">' +
             '<img src="' + popupMedia + '" alt="Popup media" ' +
             'style="display:block; width: 60%; height: auto; min-width: 600px; max-width: 60%;">' +
           '</a>';
