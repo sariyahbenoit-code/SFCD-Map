@@ -28,6 +28,7 @@ draco.setDecoderPath(
 );
 loader.setDRACOLoader(draco);
 
+// MODEL ORIGINS
 const pondOrigin = [-122.51472840835794, 37.96556501819977];
 const benchOrigin = [-122.51255653080607, 37.96784675899259];
 const closetOrigin = [-122.5143025251341, 37.96791673783633];
@@ -168,7 +169,7 @@ const customLayer = {
         t.translateZ
       );
 
-      const s = t.scale * 5;
+      const s = t.scale * 5; // adjust this number to resize models
       const scale = new THREE.Matrix4().makeScale(s, s, s);
 
       obj.matrix = new THREE.Matrix4()
@@ -233,6 +234,7 @@ map.on("load", () => {
     filter: ["==", ["geometry-type"], "LineString"]
   });
 
+  // IMPORTANT: this shows only geometry.type === "Point"
   map.addLayer({
     id: "srcd-points-layer",
     type: "circle",
