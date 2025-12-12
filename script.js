@@ -255,60 +255,71 @@ map.on("load", () => {
     map.getCanvas().style.cursor = "";
   });
 
-  // DIAGNOSTIC CLICK HANDLER - shows exactly what's wrong
   map.on("click", "srcd-points-layer", (e) => {
     if (!e.features || !e.features.length) return;
     const feature = e.features[0];
     const props = feature.properties || {};
 
     const landmark = props["Landmark"] || "Landmark";
-    const popupMedia = props["PopupMedia"] || "";
-    
-    // DIAGNOSTIC LOGS
-    console.log("🔍 DEBUG - Landmark:", landmark);
-    console.log("🔍 DEBUG - Raw PopupMedia:", popupMedia);
-    console.log("🔍 DEBUG - PopupMedia length:", popupMedia.length);
-    console.log("🔍 DEBUG - Full feature props:", props);
+    const address = props["Address"] || "";
+    const proposal = props["Proposal"] || "";
+    let popupMedia = props["PopupMedia"] || "";
 
     const coordinates = feature.geometry.coordinates.slice();
 
-    let html = `<strong>${landmark}</strong><br><br>`;
-    
-    // DIAGNOSTIC DISPLAY
-    html += `<small>DEBUG: "${popupMedia.substring(0, 50)}..." (${popupMedia.length} chars)</small><br><br>`;
+    map.flyTo({
+      center: coordinates,
+      zoom: map.getZoom(),
+      pitch: map.getPitch(),
+      bearing: map.getBearing(),
+      speed: 0.6
+    });
 
-    // Clean up the URL
-    let cleanMedia = popupMedia.trim();
-    if (cleanMedia.includes("github.com") && cleanMedia.includes("/blob/")) {
-      cleanMedia = cleanMedia
-        .replace(/\[.*?\]\(.*?\)/g, "")
-        .replace("https://github.com/", "https://raw.githubusercontent.com/")
-        .replace("/blob/", "/")
-        .trim();
+    let cleanUrl = "";
+    const markdownMatch = popupMedia.match(/\[.*?\]\((https?:\/\/[^\)]+)\)/i);
+    if (markdownMatch) {
+      cleanUrl = markdownMatch[1];
+    } else {
+      cleanUrl = popupMedia.trim();
     }
 
-    console.log("🔍 DEBUG - Cleaned PopupMedia:", cleanMedia);
+    if (cleanUrl.includes("github.com") && cleanUrl.includes("/blob/")) {
+      cleanUrl = cleanUrl
+        .replace("https://github.com/", "https://raw.githubusercontent.com/")
+        .replace("/blob/", "/");
+    }
 
-    if (cleanMedia && cleanMedia.includes("raw.githubusercontent.com")) {
-      html += `
-        <div style="text-align:center;">
-          <img src="${cleanMedia}" 
-               alt="Project image" 
-               style="width: 80%; height: auto; max-width: 300px; border-radius: 4px;"
-               onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-          <div style="display:none; color: red;">❌ Image failed to load: ${cleanMedia}</div>
-        </div>
-      `;
-    } else if (cleanMedia) {
-      html += `<a href="${cleanMedia}" target="_blank">📎 Open media</a>`;
-    } else {
-      html += "<em>❌ No PopupMedia found</em>";
+    let html = `<strong>${landmark}</strong>`;
+    if (address) html += `<br>${address}`;
+    if (proposal) html += `<br><br><strong>Proposal:</strong> ${proposal}`;
+
+    if (cleanUrl) {
+      const urlLower = cleanUrl.toLowerCase();
+      const isImage = urlLower.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+      
+      if (isImage) {
+        html += `
+          <br><br>
+          <div style="text-align:center; margin-top: 10px;">
+            <img src="${cleanUrl}" 
+                 alt="${landmark}" 
+                 style="width: 80%; height: auto; max-width: 350px; max-height: 250px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);"
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+            <div style="display:none; color: #666; font-size: 12px;">Image failed to load</div>
+          </div>
+          <br>
+          <a href="${cleanUrl}" target="_blank" style="font-size: 12px;">🔗 View full size</a>
+        `;
+      } else {
+        html += `<br><br><a href="${cleanUrl}" target="_blank" style="color: #0066cc;"><strong>📎 Open ${cleanUrl.split('.').pop()?.toUpperCase() || 'file'}</strong></a>`;
+      }
     }
 
     new mapboxgl.Popup({
       offset: [0, -40],
       anchor: "bottom",
-      closeOnMove: false
+      closeOnMove: false,
+      maxWidth: "500px"
     })
       .setLngLat(coordinates)
       .setHTML(html)
