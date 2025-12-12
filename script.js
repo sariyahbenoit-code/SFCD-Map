@@ -192,8 +192,94 @@ const customLayer = {
   }
 };
 
+// ✅ NEW: Your image points data
+const imagePoints = {
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "Landmark": "Building entrance",
+        "PopupMedia": "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/building%20entrance.png"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-122.51403244782145, 37.96782576318992]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Landmark": "Marshland change over time",
+        "PopupMedia": "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/change%20over%20time%20floating.png"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-122.51354133407277, 37.967894011876524]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Landmark": "Corner park day and night",
+        "PopupMedia": "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/corner%20park%20day%20night.png"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-122.51261014782297, 37.96772672087894]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Landmark": "Corner park overview",
+        "PopupMedia": "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/corner%20park.png"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-122.5127367747097, 37.96788480707045]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Landmark": "Fisheye perspective of forebay",
+        "PopupMedia": "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/fisheye%20perspective.png"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-122.51460483446996, 37.96568378935048]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Landmark": "Floating housing overview",
+        "PopupMedia": "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/floating%20housing.png"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-122.51446433883217, 37.9678100182618]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Landmark": "Solar powered pump station and forebay",
+        "PopupMedia": "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/forebay%20perspective.png",
+        "Address": "555 Francisco Blvd W, San Rafael, CA 94901",
+        "Proposal": "Vegetated and rip rap forebay"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-122.51472840835794, 37.96556501819977]
+      }
+    }
+  ]
+};
+
 map.on("load", () => {
-  // ✅ FIX: Add GeoJSON FIRST, then 3D layer LAST
+  // ✅ Your original GeoJSON layers FIRST
   map.addSource("srcd-data", {
     type: "geojson",
     data: "data/619data.geojson"
@@ -245,10 +331,87 @@ map.on("load", () => {
     filter: ["==", ["geometry-type"], "Point"]
   });
 
-  // ✅ Add 3D layer AFTER GeoJSON layers (fixes visibility)
+  // ✅ NEW: Add image points source and layer
+  map.addSource("image-points", {
+    type: "geojson",
+    data: imagePoints
+  });
+
+  map.addLayer({
+    id: "image-points-layer",
+    type: "circle",
+    source: "image-points",
+    paint: {
+      "circle-radius": 10,
+      "circle-color": "#FF6B6B",
+      "circle-stroke-color": "#FFFFFF",
+      "circle-stroke-width": 3,
+      "circle-opacity": 0.9
+    }
+  });
+
+  // ✅ NEW: Image points interactions
+  map.on("mouseenter", "image-points-layer", () => {
+    map.getCanvas().style.cursor = "pointer";
+  });
+
+  map.on("mouseleave", "image-points-layer", () => {
+    map.getCanvas().style.cursor = "";
+  });
+
+  map.on("click", "image-points-layer", (e) => {
+    if (!e.features || !e.features.length) return;
+    const feature = e.features[0];
+    const props = feature.properties || {};
+
+    const landmark = props["Landmark"] || "Landmark";
+    const address = props["Address"] || "";
+    const proposal = props["Proposal"] || "";
+    const popupMedia = props["PopupMedia"] || "";
+
+    const coordinates = feature.geometry.coordinates.slice();
+
+    map.flyTo({
+      center: coordinates,
+      zoom: map.getZoom(),
+      pitch: map.getPitch(),
+      bearing: map.getBearing(),
+      speed: 0.6
+    });
+
+    let html = `<strong style="color: #FF6B6B;">${landmark}</strong>`;
+    if (address) html += `<br><em style="color: #666;">${address}</em>`;
+    if (proposal) html += `<br><br><strong>Proposal:</strong> ${proposal}`;
+
+    // ✅ IMAGE POPUP SPACE - ready for your media URLs
+    if (popupMedia) {
+      html += `
+        <div style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 8px; text-align: center;">
+          <img src="${popupMedia}" 
+               alt="${landmark}" 
+               style="max-width: 250px; max-height: 200px; width: 100%; height: auto; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <div style="margin-top: 8px; font-size: 12px; color: #666;">
+            ${landmark}
+          </div>
+        </div>
+      `;
+    }
+
+    new mapboxgl.Popup({
+      offset: [0, -45],
+      anchor: "bottom",
+      closeOnMove: false,
+      className: "image-popup"
+    })
+      .setLngLat(coordinates)
+      .setHTML(html)
+      .addTo(map);
+  });
+
+  // ✅ Your original 3D layer LAST
   map.addLayer(customLayer);
 
-  // Rest of your original event handlers (unchanged)
+  // ✅ Your original srcd-points interactions
   map.on("mouseenter", "srcd-points-layer", () => {
     map.getCanvas().style.cursor = "pointer";
   });
@@ -290,29 +453,19 @@ map.on("load", () => {
 
     const links = [];
     if (proposalLink)
-      links.push(
-        `<a href="${proposalLink}" target="_blank">Proposal image</a>`
-      );
+      links.push(`<a href="${proposalLink}" target="_blank">Proposal image</a>`);
     if (existingLink)
-      links.push(
-        `<a href="${existingLink}" target="_blank">Existing condition</a>`
-      );
+      links.push(`<a href="${existingLink}" target="_blank">Existing condition</a>`);
     if (precedent1)
-      links.push(
-        `<a href="${precedent1}" target="_blank">Precedent 1</a>`
-      );
+      links.push(`<a href="${precedent1}" target="_blank">Precedent 1</a>`);
     if (precedent2)
-      links.push(
-        `<a href="${precedent2}" target="_blank">Precedent 2</a>`
-      );
+      links.push(`<a href="${precedent2}" target="_blank">Precedent 2</a>`);
     if (extras1)
       links.push(`<a href="${extras1}" target="_blank">Extra 1</a>`);
     if (extras2)
       links.push(`<a href="${extras2}" target="_blank">Extra 2</a>`);
     if (repoImage)
-      links.push(
-        `<a href="${repoImage}" target="_blank">Repository image</a>`
-      );
+      links.push(`<a href="${repoImage}" target="_blank">Repository image</a>`);
 
     if (links.length) {
       html += "<br><br><strong>Links:</strong><br>" + links.join("<br>");
