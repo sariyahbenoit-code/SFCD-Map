@@ -94,7 +94,6 @@ const map = new mapboxgl.Map({
 
 // Apply the monochrome theme once the style is loaded
 map.on("style.load", () => {
-  // This matches the Standard config pattern from the example you referenced
   map.setConfigProperty("basemap", "theme", "monochrome");
 });
 
@@ -331,35 +330,48 @@ map.on("load", () => {
     map.getCanvas().style.cursor = "";
   });
 
-  // 5. Add your polygon GeoJSON as a source
-  map.addSource("srcd-polygons", {
+  // 5. Add your full 619data.geojson as a source
+  map.addSource("srcd-geometry", {
     type: "geojson",
     data: "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/data/619data.geojson"
   });
 
-  // 6. Add a fill layer for polygons
+  // 6. Big polygon (green)
   map.addLayer({
-    id: "srcd-polygons-fill",
+    id: "srcd-polygon-fill",
     type: "fill",
-    source: "srcd-polygons",
+    source: "srcd-geometry",
+    filter: ["==", ["geometry-type"], "Polygon"],
     paint: {
-      "fill-color": "#00aaff",
-      "fill-opacity": 0.35
+      "fill-color": "#00ff00",
+      "fill-opacity": 0.4
     }
   });
 
-  // Optional outline on polygons
   map.addLayer({
-    id: "srcd-polygons-outline",
+    id: "srcd-polygon-outline",
     type: "line",
-    source: "srcd-polygons",
+    source: "srcd-geometry",
+    filter: ["==", ["geometry-type"], "Polygon"],
     paint: {
-      "line-color": "#0077aa",
+      "line-color": "#008800",
       "line-width": 2
     }
   });
 
-  // 7. Region zoom buttons
+  // 7. LineString (red)
+  map.addLayer({
+    id: "srcd-line",
+    type: "line",
+    source: "srcd-geometry",
+    filter: ["==", ["geometry-type"], "LineString"],
+    paint: {
+      "line-color": "#ff0000",
+      "line-width": 3
+    }
+  });
+
+  // 8. Region zoom buttons
   const regionBounds = [
     [-122.5155, 37.9645], // SW
     [-122.5115, 37.9695]  // NE
@@ -385,7 +397,7 @@ map.on("load", () => {
     });
   }
 
-  // 8. Checkbox toggles
+  // 9. Checkbox toggles
   const pondCheckbox = document.getElementById("togglePond");
   const benchCheckbox = document.getElementById("toggleBench");
   const closetCheckbox = document.getElementById("toggleCloset");
