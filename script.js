@@ -1,4 +1,4 @@
-// Three.js imports
+6// Three.js imports
 import * as THREE from "three";
 import { GLTFLoader } from "https://cdn.jsdelivr.net/npm/three@0.159/examples/jsm/loaders/GLTFLoader.js";
 import { DRACOLoader } from "https://cdn.jsdelivr.net/npm/three@0.159/examples/jsm/loaders/DRACOLoader.js";
@@ -15,7 +15,7 @@ const map = new mapboxgl.Map({
   config: { basemap: { theme: "monochrome" } },
   center: targetCenter,
   zoom: 17,
-  pitch: 0,
+  pitch: 60,
   antialias: true,
 });
 
