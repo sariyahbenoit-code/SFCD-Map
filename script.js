@@ -376,7 +376,7 @@ map.on("load", () => {
     type: "raster",
     source: "corner-park-plan",
     paint: {
-      "raster-opacity": 0.25
+      "raster-opacity": 0.5
     }
   });
 
@@ -397,18 +397,18 @@ map.on("load", () => {
     type: "raster",
     source: "floating-houses-plan",
     paint: {
-      "raster-opacity": 0.25
+      "raster-opacity": 0.5
     }
   });
 
-  // Forebay plan
+  // Forebay plan (corrected extents, 50% opacity)
   map.addSource("forebay-plan", {
     type: "image",
     url: "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/plans/forebay%20plan.png",
     coordinates: [
       [-122.515136, 37.966331], // top-left (W, N)
-      [-122.513958, 37.966331], // top-right (E, N)
-      [-122.513958, 37.965436], // bottom-right (E, S)
+      [-122.513592, 37.966331], // top-right (E, N)
+      [-122.513592, 37.965436], // bottom-right (E, S)
       [-122.515136, 37.965436]  // bottom-left (W, S)
     ]
   });
@@ -418,7 +418,7 @@ map.on("load", () => {
     type: "raster",
     source: "forebay-plan",
     paint: {
-      "raster-opacity": 0.25
+      "raster-opacity": 0.5
     }
   });
 
@@ -443,7 +443,7 @@ map.on("load", () => {
     });
     map.on("mouseleave", layerId, () => {
       map.getCanvas().style.cursor = "";
-      map.setPaintProperty(layerId, "raster-opacity", 0.25);
+      map.setPaintProperty(layerId, "raster-opacity", 0.5);
     });
   }
 
