@@ -74,8 +74,9 @@ const imagePoints = {
         "PopupMedia": "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/images/floating%20housing.png"
       },
       "geometry": {
+        // UPDATED: floating housing coordinates aligned with GeoJSON
         "type": "Point",
-        "coordinates": [-122.51426288935914, 37.96621700643947]
+        "coordinates": [-122.5143025251341, 37.96791673783633]
       }
     }
   ]
@@ -221,7 +222,6 @@ const customLayer = {
 
     renderer.state.reset();
     renderer.autoClear = false;
-    // FIXED: removed renderer.clearDepth() - this was causing white screen
 
     function applyTransform(obj, t, mult = 5) {
       if (!obj) return;
@@ -258,9 +258,9 @@ const customLayer = {
         .multiply(translation);
     }
 
-    applyTransform(benchModel, benchTransform, 50);    // Corner park - 10x bigger
-    applyTransform(pondModel, pondTransform, 50);      // Forebay pond
-    applyTransform(closetModel, closetTransform, 50); 
+    applyTransform(benchModel, benchTransform, 50);
+    applyTransform(pondModel, pondTransform, 50);
+    applyTransform(closetModel, closetTransform, 50);
     
     if (benchModel) benchModel.visible = showBench;
     if (pondModel) pondModel.visible = showPond;
@@ -282,14 +282,14 @@ map.on("load", () => {
     data: "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/data/619data.geojson"
   });
 
-  // 3. Big polygon (green)
+  // 3. Big polygon (use your GeoJSON color: #256634, outline #354739)
   map.addLayer({
     id: "srcd-polygon-fill",
     type: "fill",
     source: "srcd-geometry",
     filter: ["==", ["geometry-type"], "Polygon"],
     paint: {
-      "fill-color": "#00ff00",
+      "fill-color": "#256634",
       "fill-opacity": 0.4
     }
   });
@@ -300,19 +300,19 @@ map.on("load", () => {
     source: "srcd-geometry",
     filter: ["==", ["geometry-type"], "Polygon"],
     paint: {
-      "line-color": "#008800",
+      "line-color": "#354739",
       "line-width": 2
     }
   });
 
-  // 4. LineString (red)
+  // 4. LineString (use your GeoJSON red: #E8240C)
   map.addLayer({
     id: "srcd-line",
     type: "line",
     source: "srcd-geometry",
     filter: ["==", ["geometry-type"], "LineString"],
     paint: {
-      "line-color": "#ff0000",
+      "line-color": "#E8240C",
       "line-width": 3
     }
   });
@@ -421,6 +421,3 @@ map.on("load", () => {
     });
   }
 });
-
-
-
