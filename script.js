@@ -1,4 +1,3 @@
-
 import * as THREE from "three";
 import { GLTFLoader } from "https://cdn.jsdelivr.net/npm/three@0.159/examples/jsm/loaders/GLTFLoader.js";
 import { DRACOLoader } from "https://cdn.jsdelivr.net/npm/three@0.159/examples/jsm/loaders/DRACOLoader.js";
@@ -359,123 +358,7 @@ map.on("load", () => {
     data: imagePoints
   });
 
-  // 6. Add a circle layer for the points
-  map.addLayer({
-    id: "image-points-layer",
-    type: "circle",
-    source: "image-points",
-    paint: {
-      "circle-radius": 8,
-      "circle-color": "#ff5500",
-      "circle-stroke-width": 3,
-      "circle-stroke-color": "#ffffff"
-    }
-  });
-
-  // 7. Popups for image points (Before/After)
-  map.on("click", "image-points-layer", (e) => {
-    const feature = e.features && e.features[0];
-    if (!feature) return;
-
-    const coords    = feature.geometry.coordinates.slice();
-    const title     = feature.properties.Landmark || "";
-    const imgUrl    = feature.properties.PopupMedia || "";
-    const beforeUrl = feature.properties.BeforeMedia || "";
-
-    let html = `<div style="max-width:700px;">`;
-    html += `<h3 style="margin:0 0 6px;font-family:'Roboto Mono',monospace;">${title}</h3>`;
-
-    if (beforeUrl) {
-      html += `
-        <div style="margin-top:6px;">
-          <div style="font-size:12px;margin-bottom:2px;">Before</div>
-          <img src="${beforeUrl}" alt="${title} before" style="max-width:100%;height:auto;display:block;border-radius:4px;">
-        </div>
-      `;
-    }
-
-    if (imgUrl) {
-      html += `
-        <div style="margin-top:10px;">
-          <div style="font-size:12px;margin-bottom:2px;">After</div>
-          <img src="${imgUrl}" alt="${title}" style="max-width:100%;height:auto;display:block;border-radius:4px;">
-        </div>
-      `;
-    }
-
-    html += `</div>`;
-
-    new mapboxgl.Popup({ closeOnClick: true })
-      .setLngLat(coords)
-      .setHTML(html)
-      .addTo(map);
-  });
-
-  map.on("mouseenter", "image-points-layer", () => {
-    map.getCanvas().style.cursor = "pointer";
-  });
-
-  map.on("mouseleave", "image-points-layer", () => {
-    map.getCanvas().style.cursor = "";
-  });
-
-  // 8. Region zoom buttons
-  const regionBounds = [
-    [-122.5155, 37.9645], // SW
-    [-122.5115, 37.9695]  // NE
-  ];
-
-  const zoomRegionBtn = document.getElementById("zoomRegion");
-  const resetViewBtn  = document.getElementById("resetView");
-
-  if (zoomRegionBtn) {
-    zoomRegionBtn.addEventListener("click", () => {
-      map.fitBounds(regionBounds, { padding: 40, pitch: 60, bearing: 0 });
-    });
-  }
-
-  if (resetViewBtn) {
-    resetViewBtn.addEventListener("click", () => {
-      map.easeTo({
-        center: targetCenter,
-        zoom: 17,
-        pitch: 60,
-        bearing: 0
-      });
-    });
-  }
-
-  // 9. Checkbox toggles
-  const pondCheckbox   = document.getElementById("togglePond");
-  const benchCheckbox  = document.getElementById("toggleBench");
-  const closetCheckbox = document.getElementById("toggleCloset");
-
-  if (pondCheckbox) {
-    pondCheckbox.checked = showPond;
-    pondCheckbox.addEventListener("change", (e) => {
-      showPond = e.target.checked;
-      map.triggerRepaint();
-    });
-  }
-
-  if (benchCheckbox) {
-    benchCheckbox.checked = showBench;
-    benchCheckbox.addEventListener("change", (e) => {
-      showBench = e.target.checked;
-      map.triggerRepaint();
-    });
-  }
-
-  if (closetCheckbox) {
-    closetCheckbox.checked = showCloset;
-    closetCheckbox.addEventListener("change", (e) => {
-      showCloset = e.target.checked;
-      map.triggerRepaint();
-    });
-  }
-
-  // 10. Raster image overlays (plans) at 25% opacity, 100% on hover
-
+  // 6. Raster image overlays (plans) BELOW the points layer
   // Corner park plan
   map.addSource("corner-park-plan", {
     type: "image",
@@ -539,7 +422,20 @@ map.on("load", () => {
     }
   });
 
-  // Hover interactions: fade to 100% opacity on mouseenter, back to 25% on mouseleave
+  // 7. Add a circle layer for the points (ABOVE raster plans)
+  map.addLayer({
+    id: "image-points-layer",
+    type: "circle",
+    source: "image-points",
+    paint: {
+      "circle-radius": 8,
+      "circle-color": "#ff5500",
+      "circle-stroke-width": 3,
+      "circle-stroke-color": "#ffffff"
+    }
+  });
+
+  // Hover interactions: rasters go to 100% opacity on hover
   function bindRasterHover(layerId) {
     map.on("mouseenter", layerId, () => {
       map.getCanvas().style.cursor = "pointer";
@@ -554,4 +450,107 @@ map.on("load", () => {
   bindRasterHover("corner-park-plan-layer");
   bindRasterHover("floating-houses-plan-layer");
   bindRasterHover("forebay-plan-layer");
+
+  // 8. Popups for image points (Before/After)
+  map.on("click", "image-points-layer", (e) => {
+    const feature = e.features && e.features[0];
+    if (!feature) return;
+
+    const coords    = feature.geometry.coordinates.slice();
+    const title     = feature.properties.Landmark || "";
+    const imgUrl    = feature.properties.PopupMedia || "";
+    const beforeUrl = feature.properties.BeforeMedia || "";
+
+    let html = `<div style="max-width:700px;">`;
+    html += `<h3 style="margin:0 0 6px;font-family:'Roboto Mono',monospace;">${title}</h3>`;
+
+    if (beforeUrl) {
+      html += `
+        <div style="margin-top:6px;">
+          <div style="font-size:12px;margin-bottom:2px;">Before</div>
+          <img src="${beforeUrl}" alt="${title} before" style="max-width:100%;height:auto;display:block;border-radius:4px;">
+        </div>
+      `;
+    }
+
+    if (imgUrl) {
+      html += `
+        <div style="margin-top:10px;">
+          <div style="font-size:12px;margin-bottom:2px;">After</div>
+          <img src="${imgUrl}" alt="${title}" style="max-width:100%;height:auto;display:block;border-radius:4px;">
+        </div>
+      `;
+    }
+
+    html += `</div>`;
+
+    new mapboxgl.Popup({ closeOnClick: true })
+      .setLngLat(coords)
+      .setHTML(html)
+      .addTo(map);
+  });
+
+  map.on("mouseenter", "image-points-layer", () => {
+    map.getCanvas().style.cursor = "pointer";
+  });
+
+  map.on("mouseleave", "image-points-layer", () => {
+    map.getCanvas().style.cursor = "";
+  });
+
+  // 9. Region zoom buttons
+  const regionBounds = [
+    [-122.5155, 37.9645], // SW
+    [-122.5115, 37.9695]  // NE
+  ];
+
+  const zoomRegionBtn = document.getElementById("zoomRegion");
+  const resetViewBtn  = document.getElementById("resetView");
+
+  if (zoomRegionBtn) {
+    zoomRegionBtn.addEventListener("click", () => {
+      map.fitBounds(regionBounds, { padding: 40, pitch: 60, bearing: 0 });
+    });
+  }
+
+  if (resetViewBtn) {
+    resetViewBtn.addEventListener("click", () => {
+      map.easeTo({
+        center: targetCenter,
+        zoom: 17,
+        pitch: 60,
+        bearing: 0
+      });
+    });
+  }
+
+  // 10. Checkbox toggles
+  const pondCheckbox   = document.getElementById("togglePond");
+  const benchCheckbox  = document.getElementById("toggleBench");
+  const closetCheckbox = document.getElementById("toggleCloset");
+
+  if (pondCheckbox) {
+    pondCheckbox.checked = showPond;
+    pondCheckbox.addEventListener("change", (e) => {
+      showPond = e.target.checked;
+      map.triggerRepaint();
+    });
+  }
+
+  if (benchCheckbox) {
+    benchCheckbox.checked = showBench;
+    benchCheckbox.addEventListener("change", (e) => {
+      showBench = e.target.checked;
+      map.triggerRepaint();
+    });
+  }
+
+  if (closetCheckbox) {
+    closetCheckbox.checked = showCloset;
+    closetCheckbox.addEventListener("change", (e) => {
+      showCloset = e.target.checked;
+      map.triggerRepaint();
+    });
+  }
 });
+
