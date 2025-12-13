@@ -279,7 +279,7 @@ map.on("load", () => {
   // 1. Add your 3D models layer
   map.addLayer(customLayer);
 
-  // OPTIONAL: Mapbox vector 3D buildings from the 'building' layer of the composite source [web:131]
+  // OPTIONAL: Mapbox vector 3D buildings
   const layers = map.getStyle().layers;
   const labelLayerId = layers.find(
     (layer) => layer.type === "symbol" && layer.layout && layer.layout["text-field"]
@@ -472,7 +472,85 @@ map.on("load", () => {
       map.triggerRepaint();
     });
   }
+
+  // 10. Raster image overlays (plans) at 25% opacity, 100% on hover
+
+  // Corner park plan
+  map.addSource("corner-park-plan", {
+    type: "image",
+    url: "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/plans/corner%20park%20plan.png",
+    coordinates: [
+      [-122.512964, 37.968772], // top-left (W, N)
+      [-122.511369, 37.968772], // top-right (E, N)
+      [-122.511369, 37.967322], // bottom-right (E, S)
+      [-122.512964, 37.967322]  // bottom-left (W, S)
+    ]
+  });
+
+  map.addLayer({
+    id: "corner-park-plan-layer",
+    type: "raster",
+    source: "corner-park-plan",
+    paint: {
+      "raster-opacity": 0.25
+    }
+  });
+
+  // Floating houses plan
+  map.addSource("floating-houses-plan", {
+    type: "image",
+    url: "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/plans/floating%20house%20plan.png",
+    coordinates: [
+      [-122.514759, 37.968239], // top-left (W, N)
+      [-122.513436, 37.968239], // top-right (E, N)
+      [-122.513436, 37.967381], // bottom-right (E, S)
+      [-122.514759, 37.967381]  // bottom-left (W, S)
+    ]
+  });
+
+  map.addLayer({
+    id: "floating-houses-plan-layer",
+    type: "raster",
+    source: "floating-houses-plan",
+    paint: {
+      "raster-opacity": 0.25
+    }
+  });
+
+  // Forebay plan
+  map.addSource("forebay-plan", {
+    type: "image",
+    url: "https://raw.githubusercontent.com/sariyahbenoit-code/SRCD-Map/main/assets/plans/forebay%20plan.png",
+    coordinates: [
+      [-122.515136, 37.966331], // top-left (W, N)
+      [-122.513958, 37.966331], // top-right (E, N)
+      [-122.513958, 37.965436], // bottom-right (E, S)
+      [-122.515136, 37.965436]  // bottom-left (W, S)
+    ]
+  });
+
+  map.addLayer({
+    id: "forebay-plan-layer",
+    type: "raster",
+    source: "forebay-plan",
+    paint: {
+      "raster-opacity": 0.25
+    }
+  });
+
+  // Hover interactions: fade to 100% opacity on mouseenter, back to 25% on mouseleave
+  function bindRasterHover(layerId) {
+    map.on("mouseenter", layerId, () => {
+      map.getCanvas().style.cursor = "pointer";
+      map.setPaintProperty(layerId, "raster-opacity", 1.0);
+    });
+    map.on("mouseleave", layerId, () => {
+      map.getCanvas().style.cursor = "";
+      map.setPaintProperty(layerId, "raster-opacity", 0.25);
+    });
+  }
+
+  bindRasterHover("corner-park-plan-layer");
+  bindRasterHover("floating-houses-plan-layer");
+  bindRasterHover("forebay-plan-layer");
 });
-
-
-
